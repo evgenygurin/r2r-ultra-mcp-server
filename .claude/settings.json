@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allowedTools": [
+      "Read(**/*.md)",
+      "Read(CLAUDE.md)",
+      "Read(README.md)",
+      "Glob(docs/**)",
+      "Grep(docs/**)",
+      "Bash(fd:*)",
+      "Bash(rg:*)",
+      "Bash(wc:*)",
+      "Bash(echo:*)",
+      "Bash(awk:*)",
+      "Bash(xargs:*)",
+      "Bash(sort:*)",
+      "Bash(tail:*)",
+      "Bash(head:*)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ],
+    "deniedTools": [
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Edit(**/*.env*)"
+    ]
+  },
+  "hooks": []
+}
