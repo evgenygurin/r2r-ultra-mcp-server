@@ -26,6 +26,13 @@ export DEFAULT_MAX_TOKENS=4000
 export DEFAULT_MODE="research"
 export DEFAULT_SEARCH_STRATEGY="vanilla"  # vanilla, rag_fusion, hyde
 
+# Colors for output
+export GREEN='\033[0;32m'
+export BLUE='\033[0;34m'
+export YELLOW='\033[1;33m'
+export RED='\033[0;31m'
+export NC='\033[0m' # No Color
+
 # Global flags
 JSON_OUTPUT=false
 VERBOSE=false
@@ -41,4 +48,21 @@ parse_flags() {
             *) break ;;
         esac
     done
+}
+
+# Helper functions for output
+print_header() {
+    echo -e "${BLUE}==== $1 ====${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}" >&2
+}
+
+print_info() {
+    echo -e "${YELLOW}ℹ $1${NC}"
 }
