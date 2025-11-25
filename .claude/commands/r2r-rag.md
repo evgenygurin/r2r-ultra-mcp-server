@@ -1,40 +1,51 @@
 ---
 name: r2r-rag
 description: RAG query to R2R with answer generation
-allowed-tools: Read, Grep, Glob
-denied-tools: Write, Edit, Bash
+allowed-tools: Bash
+denied-tools: Write, Edit
 ---
 
 # R2R RAG Query
 
-Question: **$1**
+Query: **$1**
 
 Options:
-- Temperature: **$2** (default: 0.1 - more deterministic)
-- Model: **$3** (default: openai/gpt-4.1-mini)
+- Max tokens: **$2** (default: 8000 tokens for extended responses)
+- Flags: **--json** (raw JSON output)
 
 ## Instructions
 
-Use the R2R bridge MCP server to perform a RAG query.
+Use the bash script `.claude/scripts/r2r_client.sh` to perform RAG query with hybrid search.
 
-The system will:
-1. Search relevant documents in the knowledge base
-2. Generate an answer based on retrieved context
-3. Provide citations to source documents
+Execute the RAG command:
+```bash
+.claude/scripts/r2r_client.sh rag "$1" ${2:-8000}
+```
 
-Present the response with:
-- **Answer:** Generated response
-- **Sources:** List of documents used with citations
-- **Confidence:** If available
+RAG combines:
+1. **Retrieval** - Hybrid search (semantic + fulltext)
+2. **Augmentation** - Provide context to LLM
+3. **Generation** - Generate comprehensive answer
 
-For complex questions, consider using higher temperature (0.3-0.7).
+Present result with:
+- **Generated Answer:** The LLM's response (clean text)
+- **Context:** Brief note on sources used
+- **Length:** Token/character count if relevant
 
-If no question provided, prompt user for a question.
+Additional flags:
+- `--json` - Output raw JSON with metadata
+
+If no query provided, prompt user for a query.
 
 ## Examples
 
-```text
-/r2r-rag "What is the transformer architecture?"
-/r2r-rag "Explain quantum computing" 0.3
-/r2r-rag "Summarize recent AI research" 0.5 "anthropic/claude-3-haiku-20240307"
+```bash
+# Basic RAG query
+/r2r-rag "What are the key features of FastMCP?"
+
+# Extended response (12K tokens)
+/r2r-rag "Explain transformer architecture in detail" 12000
+
+# JSON output with metadata
+/r2r-rag "Claude Code subagents overview" --json
 ```

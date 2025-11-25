@@ -1,54 +1,68 @@
 ---
 name: r2r-collections
 description: List and manage R2R collections
-allowed-tools: Read, Grep, Glob
-denied-tools: Write, Edit, Bash
+allowed-tools: Bash
+denied-tools: Write, Edit
 ---
 
 # R2R Collections Management
 
+Action: **$1** (list, create, add-doc, add-user, optional)
+
 ## Instructions
 
-Use the R2R bridge MCP server to list all available collections in the knowledge base.
+Use the bash script `.claude/scripts/r2r_advanced.sh` to manage collections.
 
-Present collections in a clear table format:
+### Available Commands:
 
-| Collection ID | Name | Documents | Description |
-|---------------|------|-----------|-------------|
-| col_abc123 | Research Papers | 45 | AI research collection |
-| col_def456 | Technical Docs | 23 | Product documentation |
+**List collections:**
+```bash
+.claude/scripts/r2r_advanced.sh collections list
+```
 
-For each collection, provide:
-- **Collection ID:** For use in other commands
+**Create collection:**
+```bash
+.claude/scripts/r2r_advanced.sh collections create "Collection Name" "Description"
+```
+
+**Add document to collection:**
+```bash
+.claude/scripts/r2r_advanced.sh collections add-document <collection_id> <document_id>
+```
+
+**Add user to collection:**
+```bash
+.claude/scripts/r2r_advanced.sh collections add-user <user_id> <collection_id>
+```
+
+Present collections in a clear format:
+- **Collection ID:** UUID for commands
 - **Name:** Human-readable name
-- **Document count:** Number of documents
 - **Description:** Purpose or content type
+- **Document count:** Number of documents (if available)
 
 ## Next Steps
 
 After listing collections, suggest:
 1. Search within a specific collection
-2. View documents in a collection
-3. Add documents to a collection
-4. Create a new collection
+2. Create a new collection
+3. Add documents to collection
+4. Build knowledge graph for collection
 
 ## Examples
 
-```text
-/r2r-collections
-```
-
-## Related Commands
-
 ```bash
-# Search in specific collection
-/r2r-search "query" 10
+# List all collections
+/r2r-collections list
 
-# View collection documents
-# Use resource: knowledge://collections/{collection_id}/documents
+# Create new collection
+/r2r-collections create "AI Research" "Papers about artificial intelligence"
 
-# Upload to collection
-/r2r-upload ./doc.pdf collection_id
+# Add document to collection
+/r2r-collections add-doc <collection_id> <document_id>
+
+# Add user to collection
+/r2r-collections add-user <user_id> <collection_id>
 ```
 
 ## Collection Features
@@ -58,3 +72,4 @@ Collections allow you to:
 - Apply per-collection permissions
 - Filter search results by collection
 - Build collection-specific knowledge graphs
+- Share access with specific users

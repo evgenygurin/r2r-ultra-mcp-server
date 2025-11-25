@@ -21,16 +21,19 @@
 
 ## Available Tools
 
-### Primary Tools (R2R Bridge MCP)
-- `mcp__r2r-bridge__agent_chat` - основной инструмент (research mode)
-- `mcp__r2r-bridge__search_knowledge` - дополнительный поиск
-- `mcp__r2r-bridge__rag_query` - целевые запросы
+### Primary Commands (Bash Scripts)
+- `/r2r-agent` - основной slash command (research mode)
+- `.claude/scripts/r2r_client.sh agent` - прямой вызов bash скрипта
+- `/r2r-search` - дополнительный поиск
+- `/r2r-rag` - целевые запросы
 
-### Research Mode Tools (встроены в R2R agent)
+### Research Mode Tools (встроены в R2R API)
 - `rag` - standard RAG tool
 - `reasoning` - step-by-step рассуждение
 - `critique` - самокритика и валидация
 - `python_executor` - выполнение кода для анализа
+
+**Примечание:** Эти tools автоматически доступны когда используется `mode="research"` в R2R agent.
 
 ## Usage Patterns
 

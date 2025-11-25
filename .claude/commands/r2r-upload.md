@@ -1,8 +1,8 @@
 ---
 name: r2r-upload
 description: Upload document to R2R knowledge base
-allowed-tools: Read, Glob
-denied-tools: Write, Edit, Bash
+allowed-tools: Bash, Read, Glob
+denied-tools: Write, Edit
 ---
 
 # Upload Document to R2R
@@ -10,14 +10,19 @@ denied-tools: Write, Edit, Bash
 File path: **$1**
 
 Options:
-- Collection ID: **$2** (optional, add to specific collection)
+- Collection IDs: **$2** (optional, comma-separated collection IDs)
 - Metadata: **$3** (optional, JSON string)
 
 ## Instructions
 
-Use the R2R bridge MCP server to upload a document to the knowledge base.
+Use the bash script `.claude/scripts/r2r_advanced.sh` to upload a document.
 
 **IMPORTANT:** This command is potentially destructive. Confirm with user before uploading.
+
+Execute upload command:
+```bash
+.claude/scripts/r2r_advanced.sh docs upload "$1" ${2:-""} ${3:-"{}"}
+```
 
 Supported file types:
 - PDF (.pdf)
@@ -25,23 +30,35 @@ Supported file types:
 - Text (.txt)
 - Word (.docx)
 - HTML (.html)
+- JSON (.json)
+- CSV (.csv)
 
-After upload:
-1. Extract document_id from response
-2. Confirm successful upload
+After successful upload:
+1. Extract `document_id` from response
+2. Confirm successful upload with status
 3. Suggest next steps:
-   - Search the uploaded document
-   - Add to a collection
-   - Extract knowledge graph
+   - Extract knowledge graph: `.claude/scripts/r2r_advanced.sh docs extract <document_id>`
+   - Search the document content
+   - Add to more collections
+   - Build knowledge graph communities
 
-If file path not provided, list available documents in current directory.
+If file path not provided, list available documents in current directory using Glob.
 
 ## Examples
 
-```text
+```bash
+# Upload single document
 /r2r-upload ./research.pdf
-/r2r-upload ./paper.pdf collection_123
-/r2r-upload ./document.md collection_456 '{"category": "research", "year": 2024}'
+
+# Upload to specific collections
+/r2r-upload ./paper.pdf "col1,col2,col3"
+
+# Upload with metadata
+/r2r-upload ./document.md "" '{"category": "research", "year": 2024, "author": "John Doe"}'
+
+# Upload and extract knowledge graph
+/r2r-upload ./technical-doc.pdf "collection_id"
+# Then run: .claude/scripts/r2r_advanced.sh docs extract <returned_document_id>
 ```
 
 ## Security Notes
@@ -49,4 +66,8 @@ If file path not provided, list available documents in current directory.
 - File must exist and be accessible
 - Upload requires appropriate permissions
 - Large files may take time to process
-- R2R will automatically chunk and embed the document
+- R2R will automatically:
+  - Chunk the document
+  - Generate embeddings
+  - Index for search
+  - Extract entities (if requested)

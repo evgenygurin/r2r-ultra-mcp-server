@@ -18,12 +18,18 @@
 - Ранжирование результатов по релевантности
 - Aggregation insights (статистика по результатам)
 
-## Available Tools
+## Available Commands
 
-### Primary Tools (R2R Bridge MCP)
-- `mcp__r2r-bridge__search_knowledge` - основной инструмент поиска
-- `mcp__r2r-bridge__search_entities` - поиск в knowledge graph
-- `mcp__r2r-bridge__list_collections` - список коллекций
+### Primary Commands (Bash Scripts)
+- `/r2r-search` - основной slash command для поиска
+- `.claude/scripts/r2r_client.sh search` - прямой вызов bash скрипта
+- `/r2r-collections` - работа с коллекциями
+- `.claude/scripts/r2r_advanced.sh graph` - работа с knowledge graph
+
+### Advanced Operations
+- `.claude/scripts/r2r_advanced.sh graph-entities` - поиск сущностей
+- `.claude/scripts/r2r_advanced.sh graph-relationships` - связи между сущностями
+- `.claude/scripts/r2r_advanced.sh collections-list` - список коллекций
 
 ### Supporting Tools
 - `Read` - чтение документов для контекста

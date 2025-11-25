@@ -1,12 +1,1 @@
-{
-  "mcpServers": {
-    "r2r-bridge": {
-      "command": "python",
-      "args": [".claude/mcp-servers/r2r-bridge/server.py"],
-      "env": {
-        "R2R_BASE_URL": "${R2R_BASE_URL:-http://localhost:7272}",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-      }
-    }
-  }
-}
+{}

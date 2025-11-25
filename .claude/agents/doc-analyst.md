@@ -18,11 +18,17 @@
 - Fact extraction с верификацией источников
 - Comparative analysis между документами
 
-## Available Tools
+## Available Commands
 
-### Primary Tools (R2R Bridge MCP)
-- `mcp__r2r-bridge__rag_query` - основной инструмент RAG
-- `mcp__r2r-bridge__search_knowledge` - поиск релевантных документов
+### Primary Commands (Bash Scripts)
+- `/r2r-rag` - основной slash command для RAG запросов
+- `.claude/scripts/r2r_client.sh rag` - прямой вызов bash скрипта
+- `/r2r-search` - поиск релевантных документов
+
+### Advanced Operations
+- `.claude/scripts/r2r_advanced.sh docs-list` - список документов
+- `.claude/scripts/r2r_advanced.sh docs-get` - получить конкретный документ
+- `.claude/scripts/r2r_advanced.sh search-filtered` - поиск с фильтрами
 
 ### Supporting Tools
 - `Read` - чтение локальных файлов
