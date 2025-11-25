@@ -1,39 +1,4 @@
 {
-  "permissions": {
-    "allowedTools": [
-      "Read(**/*.md)",
-      "Read(CLAUDE.md)",
-      "Read(README.md)",
-      "Glob(docs/**)",
-      "Grep(docs/**)",
-      "Bash(fd:*)",
-      "Bash(rg:*)",
-      "Bash(wc:*)",
-      "Bash(echo:*)",
-      "Bash(awk:*)",
-      "Bash(xargs:*)",
-      "Bash(sort:*)",
-      "Bash(tail:*)",
-      "Bash(head:*)",
-      "Bash(git status)",
-      "Bash(git diff)",
-      "Bash(git log:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "mcp__r2r-bridge__search_knowledge",
-      "mcp__r2r-bridge__rag_query",
-      "mcp__r2r-bridge__agent_chat",
-      "mcp__r2r-bridge__search_entities",
-      "mcp__r2r-bridge__list_collections"
-    ],
-    "deniedTools": [
-      "Bash(rm -rf:*)",
-      "Bash(sudo:*)",
-      "Edit(**/*.env*)",
-      "mcp__r2r-bridge__upload_document"
-    ]
-  },
   "mcpServers": {
     "r2r-bridge": {
       "command": "python",
@@ -43,28 +8,5 @@
         "OPENAI_API_KEY": "${OPENAI_API_KEY}"
       }
     }
-  },
-  "hooks": [
-    {
-      "event": "SessionStart",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "curl -s -o /dev/null -w '%{http_code}' ${R2R_BASE_URL:-http://localhost:7272}/v3/system/settings | grep -q 200 && echo '✓ R2R: Connected' || echo '✗ R2R: Not available'",
-          "description": "Check R2R availability"
-        }
-      ]
-    },
-    {
-      "event": "PostToolUse",
-      "matcher": "mcp__r2r-bridge__*",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "echo \"[$(date +%H:%M:%S)] $CLAUDE_TOOL_NAME\" >> /tmp/r2r-usage.log",
-          "description": "Log R2R tool usage"
-        }
-      ]
-    }
-  ]
+  }
 }
