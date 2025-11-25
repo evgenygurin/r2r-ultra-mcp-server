@@ -78,8 +78,12 @@ r2r_agent() {
         # Extract conversation_id for follow-up
         local new_conv_id=$(echo "$response" | jq -r '.results.conversation_id // empty')
         if [ -n "$new_conv_id" ] && [ -z "$conversation_id" ]; then
+            # Save to temp file for easy reuse
+            echo "$new_conv_id" > /tmp/.r2r_conversation_id
+
             # Output conversation_id to stderr without colors for easy copying
             echo "Conversation ID: $new_conv_id" >&2
+            echo "To reuse: CONV_ID=\$(head -1 /tmp/.r2r_conversation_id)" >&2
             echo "" >&2
         fi
 
@@ -130,7 +134,12 @@ EXTENDED THINKING:
 
 MULTI-TURN CONVERSATIONS:
     The agent returns a conversation_id on first query.
-    Use it as 3rd parameter or --conversation <id> to continue.
+    The ID is automatically saved to /tmp/.r2r_conversation_id.
+
+    Reuse conversation:
+    - CONV_ID=\$(head -1 /tmp/.r2r_conversation_id)
+    - agent "next question" rag \$CONV_ID
+    - agent "next question" --conversation \$CONV_ID
 
 EXAMPLES:
     # Basic agent query (research mode, legacy style)
@@ -150,6 +159,10 @@ EXAMPLES:
 
     # Continue conversation (named flags)
     agent "What about FastMCP?" --mode rag --conversation abc123-def456
+
+    # Reuse last conversation_id (from temp file)
+    CONV_ID=\$(head -1 /tmp/.r2r_conversation_id)
+    agent "Follow-up question" rag \$CONV_ID
 
     # Custom token limit
     agent "Comprehensive guide" rag "" 8000
