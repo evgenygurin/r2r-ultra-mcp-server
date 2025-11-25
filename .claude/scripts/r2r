@@ -23,9 +23,6 @@ MANAGEMENT COMMANDS:
     docs <action> [args]                Document management (list, get, upload, delete)
     collections <action> [args]         Collection management (list, create, add-doc)
     graph <action> [args]               Knowledge graph operations (entities, relationships)
-
-ADVANCED COMMANDS:
-    advanced-search <action> [args]     Advanced search (filtered, strategy, graph)
     analytics <action> [args]           Analytics (collection, document, system)
 
 GLOBAL FLAGS:
@@ -34,8 +31,12 @@ GLOBAL FLAGS:
     --thinking                          Enable extended thinking (agent only)
 
 EXAMPLES:
-    # Core
+    # Core - Search
     r2r search "machine learning" 5
+    r2r search "AI" --filter document_type=pdf
+    r2r search "transformers" --graph --collection abc123
+
+    # Core - RAG & Agent
     r2r rag "Explain transformers"
     r2r agent "What is DeepSeek R1?"
 
@@ -43,6 +44,7 @@ EXAMPLES:
     r2r docs list
     r2r collections create "My Collection"
     r2r graph entities abc123
+    r2r analytics collection abc123
 
 For detailed help on each command:
     r2r <command> help
@@ -86,11 +88,6 @@ case "$COMMAND" in
     graph|kg)
         shift
         "${SCRIPT_DIR}/commands/graph.sh" "$@"
-        ;;
-
-    advanced-search|adv-search|asearch)
-        shift
-        "${SCRIPT_DIR}/commands/advanced-search.sh" "$@"
         ;;
 
     analytics|stats)
