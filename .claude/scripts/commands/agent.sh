@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 # R2R Agent Command
-# Multi-turn agent with research/rag modes and extended thinking
+# Multi-turn agent with research/rag modes
 
 source "$(dirname "$0")/../lib/common.sh"
 
 # Agent-specific flags
-AGENT_MODE="$DEFAULT_MODE"
+AGENT_MODE=""
 CONVERSATION_ID=""
-MAX_TOKENS="$DEFAULT_MAX_TOKENS"
+MAX_TOKENS=""
 EXTENDED_THINKING=false
 
 r2r_agent() {
     local query="$1"
-    local mode="$AGENT_MODE"
-    local max_tokens="$MAX_TOKENS"
+    local mode="${2:-$DEFAULT_MODE}"
+    local conversation_id="${3:-}"
+    local max_tokens="${4:-$DEFAULT_MAX_TOKENS}"
+    local json_output="${5:-false}"
+    local extended_thinking="${6:-false}"
 
     # Build message object
     local message=$(jq -n \
@@ -25,7 +28,7 @@ r2r_agent() {
         --argjson tokens "$max_tokens" \
         '{max_tokens: $tokens}')
 
-    if [ "$EXTENDED_THINKING" = true ]; then
+    if [ "$extended_thinking" = "true" ]; then
         rag_config=$(echo "$rag_config" | jq \
             '. + {extended_thinking: true, thinking_budget: 4096, temperature: 1}')
     fi
@@ -34,33 +37,33 @@ r2r_agent() {
     local search_settings=$(jq -n \
         '{use_hybrid_search: true}')
 
-    # Select tools based on mode
-    local tools_array="[]"
-    if [ "$mode" = "rag" ]; then
-        tools_array='["search_file_knowledge","search_file_descriptions","get_file_content","web_search","web_scrape"]'
-    elif [ "$mode" = "research" ]; then
-        tools_array='["rag","reasoning","critique","python_executor"]'
-    fi
-
-    # Build complete payload
+    # Build base payload
     local payload=$(jq -n \
         --argjson msg "$message" \
         --arg mode "$mode" \
         --argjson search_settings "$search_settings" \
         --argjson rag_config "$rag_config" \
-        --argjson tools "$tools_array" \
         '{
             message: $msg,
             mode: $mode,
             search_mode: "advanced",
             search_settings: $search_settings,
             rag_generation_config: $rag_config
-        } + (if $mode == "rag" then {rag_tools: $tools} elif $mode == "research" then {research_tools: $tools} else {} end)')
+        }')
+
+    # Add tools based on mode
+    if [ "$mode" = "rag" ]; then
+        payload=$(echo "$payload" | jq \
+            '.rag_tools = ["search_file_knowledge","search_file_descriptions","get_file_content","web_search","web_scrape"]')
+    elif [ "$mode" = "research" ]; then
+        payload=$(echo "$payload" | jq \
+            '.research_tools = ["rag","reasoning","critique","python_executor"]')
+    fi
 
     # Add conversation_id if provided
-    if [ -n "$CONVERSATION_ID" ]; then
+    if [ -n "$conversation_id" ]; then
         payload=$(echo "$payload" | jq \
-            --arg cid "$CONVERSATION_ID" \
+            --arg cid "$conversation_id" \
             '. + {conversation_id: $cid}')
     fi
 
@@ -69,12 +72,12 @@ r2r_agent() {
         -H "Authorization: Bearer ${API_KEY}" \
         -d "$payload")
 
-    if [ "$JSON_OUTPUT" = true ]; then
+    if [ "$json_output" = true ]; then
         echo "$response" | jq '.'
     else
         # Extract conversation_id for follow-up
         local new_conv_id=$(echo "$response" | jq -r '.results.conversation_id // empty')
-        if [ -n "$new_conv_id" ] && [ -z "$CONVERSATION_ID" ]; then
+        if [ -n "$new_conv_id" ] && [ -z "$conversation_id" ]; then
             print_info "Conversation ID: $new_conv_id"
             echo ""
         fi
@@ -96,9 +99,18 @@ show_help() {
 R2R Agent Command
 
 USAGE:
+    agent <query> [mode] [conversation_id] [max_tokens] [--json] [--thinking]
+
+    Or with named flags:
     agent <query> [options]
 
-OPTIONS:
+POSITIONAL PARAMETERS (legacy):
+    query               The question or instruction for the agent
+    mode                Agent mode: research or rag (default: $DEFAULT_MODE)
+    conversation_id     Continue existing conversation (optional)
+    max_tokens          Max tokens for generation (default: $DEFAULT_MAX_TOKENS)
+
+OPTIONS (named flags):
     --mode <name>               Agent mode: research or rag (default: $DEFAULT_MODE)
     --conversation <id>         Continue existing conversation
     --max-tokens <n>            Max tokens for generation (default: $DEFAULT_MAX_TOKENS)
@@ -117,32 +129,40 @@ EXTENDED THINKING:
 
 MULTI-TURN CONVERSATIONS:
     The agent returns a conversation_id on first query.
-    Use --conversation <id> to continue the conversation.
+    Use it as 3rd parameter or --conversation <id> to continue.
 
 EXAMPLES:
-    # Basic agent query (research mode)
+    # Basic agent query (research mode, legacy style)
     agent "What is R2R?"
 
-    # RAG mode for document queries
+    # RAG mode (legacy style)
+    agent "What is R2R?" rag
+
+    # RAG mode with named flags
     agent "Explain hybrid search" --mode rag
 
     # Research mode with extended thinking
     agent "Analyze R2R architecture" --mode research --thinking
 
-    # Continue conversation
-    agent "What about FastMCP?" --conversation abc123-def456
+    # Continue conversation (legacy style)
+    agent "What about FastMCP?" rag abc123-def456
+
+    # Continue conversation (named flags)
+    agent "What about FastMCP?" --mode rag --conversation abc123-def456
 
     # Custom token limit
+    agent "Comprehensive guide" rag "" 8000
     agent "Comprehensive guide" --max-tokens 8000
 
     # JSON output
+    agent "test" rag "" "" --json
     agent "test" --json
 EOF
 }
 
 # If executed directly
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-    # Parse flags and positional arguments
+    # Parse named flags first, they set global variables
     ARGS=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -183,5 +203,18 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
         exit 0
     fi
 
-    r2r_agent "${ARGS[@]}"
+    # Build parameters: merge positional and named flags
+    query="${ARGS[0]}"
+    mode="${AGENT_MODE:-${ARGS[1]:-$DEFAULT_MODE}}"
+    conversation_id="${CONVERSATION_ID:-${ARGS[2]:-}}"
+    max_tokens="${MAX_TOKENS:-${ARGS[3]:-$DEFAULT_MAX_TOKENS}}"
+
+    # Convert boolean flags
+    json_output="false"
+    [ "$JSON_OUTPUT" = true ] && json_output="true"
+
+    extended_thinking="false"
+    [ "$EXTENDED_THINKING" = true ] && extended_thinking="true"
+
+    r2r_agent "$query" "$mode" "$conversation_id" "$max_tokens" "$json_output" "$extended_thinking"
 fi
