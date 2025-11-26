@@ -27,6 +27,7 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -38,6 +39,20 @@ from mcp.types import ErrorData, PromptMessage, TextContent
 # ========================================
 # Configuration & Logging Setup
 # ========================================
+
+# Load .env file if it exists
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                # Don't override existing environment variables
+                if key not in os.environ:
+                    os.environ[key] = value
 
 # R2R Configuration
 R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://localhost:7272")
