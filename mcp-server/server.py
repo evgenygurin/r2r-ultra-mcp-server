@@ -218,25 +218,26 @@ class ErrorHandlingMiddleware(Middleware):
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """Handle tool execution errors with retry logic."""
-        tool_name = "tool"
-        
+        # Get operation identifier from context
+        operation_id = f"{context.method}" if hasattr(context, 'method') else "operation"
+
         for attempt in range(self.max_retries + 1):
             try:
                 return await call_next(context)
             except httpx.HTTPStatusError as e:
-                error_key = f"{tool_name}:HTTP{e.response.status_code}"
+                error_key = f"{operation_id}:HTTP{e.response.status_code}"
                 self.error_counts[error_key] += 1
 
                 if attempt < self.max_retries and e.response.status_code >= 500:
                     wait_time = 2 ** attempt
                     self.logger.warning(
-                        f"⚠️ Retrying '{tool_name}' after HTTP {e.response.status_code} "
+                        f"⚠️ Retrying after HTTP {e.response.status_code} "
                         f"(attempt {attempt + 1}/{self.max_retries + 1}, waiting {wait_time}s)"
                     )
                     await asyncio.sleep(wait_time)
                     continue
 
-                self.logger.error(f"❌ '{tool_name}' failed with HTTP {e.response.status_code}")
+                self.logger.error(f"❌ Operation failed with HTTP {e.response.status_code}")
                 raise McpError(
                     ErrorData(
                         code=-32603,
@@ -244,19 +245,19 @@ class ErrorHandlingMiddleware(Middleware):
                     )
                 )
             except Exception as e:
-                error_key = f"{tool_name}:{type(e).__name__}"
+                error_key = f"{operation_id}:{type(e).__name__}"
                 self.error_counts[error_key] += 1
 
                 if attempt < self.max_retries:
                     wait_time = 2 ** attempt
                     self.logger.warning(
-                        f"⚠️ Retrying '{tool_name}' after {type(e).__name__} "
+                        f"⚠️ Retrying after {type(e).__name__} "
                         f"(attempt {attempt + 1}/{self.max_retries + 1})"
                     )
                     await asyncio.sleep(wait_time)
                     continue
 
-                self.logger.error(f"❌ '{tool_name}' failed: {e}")
+                self.logger.error(f"❌ Operation failed: {e}")
                 raise
 
 
