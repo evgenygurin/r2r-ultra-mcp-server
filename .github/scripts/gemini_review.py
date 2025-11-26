@@ -151,7 +151,7 @@ def main():
             try:
                 # Use new SDK method
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt
                 )
                 if response.text:
@@ -200,7 +200,7 @@ def main():
                 
                 try:
                     consistency_response = client.models.generate_content(
-                        model='gemini-1.5-flash',
+                        model='gemini-2.5-flash',
                         contents=consistency_prompt
                     )
                     if consistency_response.text:
