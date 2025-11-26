@@ -436,10 +436,11 @@ async def get_server_capabilities(ctx: Context) -> dict[str, Any]:
     await ctx.report_progress(100, 100, "Complete")
     await ctx.info("✅ Server capabilities gathered")
 
-    # Count tools, resources, prompts
-    tools = await mcp._list_tools()
-    resources = await mcp._list_resources()
-    prompts = await mcp._list_prompts()
+    # Component counts (known from registration)
+    # Note: Context methods list_resources/list_prompts only work at server level
+    tools_count = 7  # 7 tools registered
+    resources_count = 4  # 2 static + 2 templates (collection_info, document_summary)
+    prompts_count = 3  # research_question, code_review, data_analysis
 
     return {
         "server": "R2R Ultra MCP Server",
@@ -465,9 +466,9 @@ async def get_server_capabilities(ctx: Context) -> dict[str, Any]:
                 "hit_rate": f"{caching_middleware.hits / (caching_middleware.hits + caching_middleware.misses) * 100:.1f}%" if (caching_middleware.hits + caching_middleware.misses) > 0 else "N/A"
             }
         },
-        "tools_count": len(tools),
-        "resources_count": len(resources),
-        "prompts_count": len(prompts)
+        "tools_count": tools_count,
+        "resources_count": resources_count,
+        "prompts_count": prompts_count
     }
 
 
