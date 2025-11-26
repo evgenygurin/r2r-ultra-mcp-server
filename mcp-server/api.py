@@ -131,19 +131,40 @@ async def root():
     """API root - server info."""
     return {
         "name": "R2R MCP Tools API",
-        "version": "1.0.0",
+        "version": "3.0.0",
+        "description": "REST API wrapper for R2R Ultra MCP Server - all MCP tools, resources, and prompts as HTTP endpoints",
         "r2r_base_url": R2R_BASE_URL,
         "api_key_configured": bool(API_KEY),
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc",
+            "openapi_json": "/openapi.json"
+        },
         "endpoints": {
-            "GET /": "This info",
-            "GET /health": "Health check",
-            "GET /capabilities": "Server capabilities",
-            "POST /search": "R2R search with progress",
-            "POST /rag": "R2R RAG with sampling",
-            "POST /batch-analysis": "Batch document analysis",
-            "POST /smart-search": "Smart collection search",
-            "GET /stats": "Performance statistics",
-            "POST /cache/clear": "Clear cache"
+            "tools": {
+                "POST /search": "R2R search with progress",
+                "POST /rag": "R2R RAG with sampling",
+                "POST /batch-analysis": "Batch document analysis",
+                "POST /smart-search": "Smart collection search",
+                "GET /stats": "Performance statistics",
+                "POST /cache/clear": "Clear cache"
+            },
+            "resources": {
+                "GET /resources/stats": "Server statistics",
+                "GET /resources/config": "Server configuration",
+                "GET /resources/collection/{id}": "Collection info",
+                "GET /resources/document/{id}": "Document summary"
+            },
+            "prompts": {
+                "POST /prompts/research": "Research prompt generator",
+                "POST /prompts/code-review": "Code review prompt",
+                "POST /prompts/data-analysis": "Data analysis prompt"
+            },
+            "misc": {
+                "GET /": "This info",
+                "GET /health": "Health check",
+                "GET /capabilities": "Server capabilities"
+            }
         }
     }
 
@@ -164,14 +185,54 @@ async def capabilities():
     try:
         # Check R2R health
         health = await _make_r2r_request("GET", "/v3/health")
-        
+
         return {
             "server": "R2R MCP Tools API",
-            "version": "1.0.0",
+            "version": "3.0.0",
             "r2r_base_url": R2R_BASE_URL,
             "r2r_health": health,
             "api_key_configured": bool(API_KEY),
-            "endpoints_count": 8
+            "features": {
+                "search": True,
+                "rag": True,
+                "batch_analysis": True,
+                "smart_search": True,
+                "resources": True,
+                "prompts": True,
+                "cache_management": True
+            },
+            "endpoints": {
+                "tools": [
+                    "/search",
+                    "/rag",
+                    "/batch-analysis",
+                    "/smart-search",
+                    "/stats",
+                    "/cache/clear"
+                ],
+                "resources": [
+                    "/resources/stats",
+                    "/resources/config",
+                    "/resources/collection/{collection_id}",
+                    "/resources/document/{document_id}"
+                ],
+                "prompts": [
+                    "/prompts/research",
+                    "/prompts/code-review",
+                    "/prompts/data-analysis"
+                ],
+                "misc": [
+                    "/",
+                    "/health",
+                    "/capabilities"
+                ]
+            },
+            "endpoints_count": 16,
+            "documentation": {
+                "swagger_ui": "/docs",
+                "redoc": "/redoc",
+                "openapi_json": "/openapi.json"
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -313,6 +374,220 @@ async def clear_cache_endpoint():
     return {
         "status": "info",
         "message": "Stateless API - no cache to clear",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+# ========================================
+# Resources Endpoints
+# ========================================
+
+@app.get("/resources/stats")
+async def server_stats_resource():
+    """Get R2R server statistics."""
+    try:
+        collections = await _make_r2r_request("GET", "/v3/collections")
+        health = await _make_r2r_request("GET", "/v3/health")
+
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "collections_count": len(collections.get("results", [])),
+            "r2r_health": health,
+            "uptime": "N/A (stateless API)"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/resources/config")
+async def server_config_resource():
+    """Get server configuration."""
+    return {
+        "r2r_base_url": R2R_BASE_URL,
+        "api_version": "3.0.0",
+        "api_key_configured": bool(API_KEY),
+        "timeout": TIMEOUT,
+        "features": {
+            "hybrid_search": True,
+            "rag_generation": True,
+            "collections": True,
+            "knowledge_graph": True,
+            "batch_analysis": True
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/resources/collection/{collection_id}")
+async def collection_info_resource(collection_id: str):
+    """Get detailed collection information."""
+    try:
+        collection = await _make_r2r_request("GET", f"/v3/collections/{collection_id}")
+        return {
+            "status": "success",
+            "collection": collection,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Collection not found: {str(e)}")
+
+
+@app.get("/resources/document/{document_id}")
+async def document_summary_resource(document_id: str):
+    """Get document summary and metadata."""
+    try:
+        document = await _make_r2r_request("GET", f"/v3/documents/{document_id}")
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "title": document.get("title", "Untitled"),
+            "summary": document.get("summary", "No summary available"),
+            "metadata": document.get("metadata", {}),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Document not found: {str(e)}")
+
+
+# ========================================
+# Prompts Endpoints
+# ========================================
+
+class ResearchPromptRequest(BaseModel):
+    """Research prompt request."""
+    topic: str
+    depth: str = "standard"  # quick, standard, comprehensive
+
+
+class CodeReviewRequest(BaseModel):
+    """Code review prompt request."""
+    code_snippet: str
+    language: str = "python"
+    focus_areas: list[str] = ["security", "performance", "best_practices"]
+
+
+class DataAnalysisRequest(BaseModel):
+    """Data analysis prompt request."""
+    dataset_description: str
+
+
+@app.post("/prompts/research")
+async def research_prompt(request: ResearchPromptRequest):
+    """Generate research question prompt."""
+    depth_instructions = {
+        "quick": "Provide a concise overview focusing on key points only.",
+        "standard": "Provide a balanced analysis covering main aspects and implications.",
+        "comprehensive": "Conduct thorough research covering all aspects, implications, and related topics."
+    }
+
+    instruction = depth_instructions.get(request.depth, depth_instructions["standard"])
+
+    prompt = f"""Research Topic: {request.topic}
+
+Depth Level: {request.depth}
+
+Instructions:
+{instruction}
+
+Please structure your response with:
+1. Executive Summary
+2. Key Findings
+3. Detailed Analysis
+4. Implications
+5. Recommendations
+6. Sources/References
+"""
+
+    return {
+        "role": "user",
+        "content": prompt,
+        "metadata": {
+            "topic": request.topic,
+            "depth": request.depth
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/prompts/code-review")
+async def code_review_prompt(request: CodeReviewRequest):
+    """Generate code review prompt."""
+    focus_areas_text = "\n".join([f"- {area}" for area in request.focus_areas])
+
+    prompt = f"""Code Review Request
+
+Language: {request.language}
+
+Focus Areas:
+{focus_areas_text}
+
+Code to Review:
+```{request.language}
+{request.code_snippet}
+```
+
+Please provide a comprehensive code review covering:
+1. Code Quality & Readability
+2. Security Vulnerabilities
+3. Performance Optimization Opportunities
+4. Best Practices Compliance
+5. Specific Recommendations for Improvement
+
+Format your review with clear sections and actionable feedback.
+"""
+
+    return {
+        "role": "user",
+        "content": prompt,
+        "metadata": {
+            "language": request.language,
+            "focus_areas": request.focus_areas
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/prompts/data-analysis")
+async def data_analysis_prompt(request: DataAnalysisRequest):
+    """Generate data analysis prompt."""
+    prompt = f"""Data Analysis Request
+
+Dataset: {request.dataset_description}
+
+Please perform the following analysis:
+
+1. Data Overview
+   - Describe the dataset structure and key variables
+   - Identify data types and formats
+
+2. Exploratory Analysis
+   - Summary statistics
+   - Distribution analysis
+   - Missing data assessment
+
+3. Key Insights
+   - Patterns and trends
+   - Correlations and relationships
+   - Anomalies or outliers
+
+4. Visualization Recommendations
+   - Suggest appropriate chart types
+   - Key metrics to visualize
+
+5. Analysis Recommendations
+   - Statistical methods to apply
+   - Further investigation areas
+
+Please provide specific, actionable insights based on the dataset characteristics.
+"""
+
+    return {
+        "role": "user",
+        "content": prompt,
+        "metadata": {
+            "dataset_description": request.dataset_description
+        },
         "timestamp": datetime.now().isoformat()
     }
 
