@@ -27,28 +27,29 @@ pip install -e .
 
 ## Configuration
 
-Create `.env` file:
+Create `.env` file in project root:
 
 ```bash
 R2R_BASE_URL=http://localhost:7272  # Your R2R instance URL
 API_KEY=your_api_key_here            # R2R API key
 ```
 
-## Usage
+## Installation in Cursor
 
-### Run MCP Server
+### Step 1: Install Dependencies
 
 ```bash
-# Stdio transport (for Claude Code)
-python server.py
-
-# Or with fastmcp CLI
-fastmcp run server.py
+cd /Users/laptop/dev/r2r-fastmcp/mcp-server
+uv sync
+# or
+pip install -e .
 ```
 
-### Configure in Claude Code
+### Step 2: Configure MCP Server
 
-Add to `.claude/settings.json`:
+Open Cursor Settings (`Cmd + ,`) → search "MCP" → click "Edit in settings.json"
+
+Or manually edit `~/.cursor/settings.json`:
 
 ```json
 {
@@ -57,8 +58,154 @@ Add to `.claude/settings.json`:
       "command": "python",
       "args": ["/Users/laptop/dev/r2r-fastmcp/mcp-server/server.py"],
       "env": {
+        "R2R_BASE_URL": "{{R2R_BASE_URL}}",
+        "API_KEY": "{{API_KEY}}"
+      }
+    }
+  }
+}
+```
+
+### Step 3: Set Environment Variables
+
+Create `~/.cursor/.env` or add to your shell profile:
+
+```bash
+export R2R_BASE_URL=http://localhost:7272
+export API_KEY=your_api_key_here
+```
+
+### Step 4: Restart Cursor
+
+Close and reopen Cursor to load the MCP server.
+
+### Step 5: Verify Installation
+
+In Cursor chat, type `@` and you should see `r2r` MCP server with available tools.
+
+## Deployment
+
+> **💡 Quick Start**: See [QUICK_DEPLOY.md](./QUICK_DEPLOY.md) for 3-minute cloud deployment!
+
+Multiple deployment options for different use cases.
+
+### Quick Options
+
+| Method | Difficulty | Best For | Link |
+|--------|------------|----------|------|
+| **FastMCP Cloud** | ⭐ Easiest | Production, zero-config | [Guide](./FASTMCP_CLOUD_DEPLOY.md) |
+| **HTTP/SSE Server** | ⭐ Easy | Remote access, self-hosted | [Guide](./DEPLOYMENT.md) |
+| **Docker** | ⭐⭐ Medium | Containers, cloud | [Guide](./DEPLOYMENT.md) |
+| **Systemd** | ⭐⭐ Medium | Linux servers, always-on | [Guide](./DEPLOYMENT.md) |
+| **Stdio (Local)** | ⭐ Easy | Cursor/Claude Desktop (local) | See above |
+
+### 🚀 FastMCP Cloud (Recommended)
+
+Deploy to production in **3 steps** with automatic HTTPS, monitoring, and GitHub integration:
+
+1. Push your code to GitHub
+2. Visit [fastmcp.cloud](https://fastmcp.cloud) and connect your repo
+3. Configure entrypoint: `mcp-server/server.py:mcp`
+
+**Result**: Your server at `https://your-project.fastmcp.app/mcp` ✅
+
+**Features**:
+- ✅ Free for personal use
+- ✅ Automatic HTTPS & SSL
+- ✅ Auto-redeploy on git push
+- ✅ Built-in monitoring dashboard
+- ✅ Environment variables management
+- ✅ PR preview deployments
+
+**📚 Full Guide**: [FASTMCP_CLOUD_DEPLOY.md](./FASTMCP_CLOUD_DEPLOY.md)
+
+### Quick Start: Local HTTP/SSE Server
+
+For self-hosted deployment:
+
+```bash
+cd /Users/laptop/dev/r2r-fastmcp/mcp-server
+
+# Run server with HTTP/SSE transport
+python server.py --transport sse --port 8000
+
+# Or with fastmcp CLI
+fastmcp run server.py --transport sse --port 8000
+
+# Access at: http://localhost:8000/sse
+```
+
+### Connect from Cursor (Remote)
+
+```json
+{
+  "mcpServers": {
+    "r2r-cloud": {
+      "url": "https://your-project.fastmcp.app/mcp",
+      "transport": "sse"
+    }
+  }
+}
+```
+
+Or for self-hosted:
+
+```json
+{
+  "mcpServers": {
+    "r2r-remote": {
+      "url": "http://your-server:8000/sse",
+      "transport": "sse"
+    }
+  }
+}
+```
+
+### Full Deployment Guides
+
+**☁️ [FASTMCP_CLOUD_DEPLOY.md](./FASTMCP_CLOUD_DEPLOY.md)** - Zero-config cloud deployment:
+- Step-by-step setup with GitHub
+- Environment variables configuration
+- Automatic redeploy workflows
+- Monitoring and metrics
+- PR preview deployments
+- FAQ and troubleshooting
+
+**🔧 [DEPLOYMENT.md](./DEPLOYMENT.md)** - Self-hosted deployment:
+- Docker & Docker Compose
+- Systemd service configuration
+- Nginx reverse proxy with SSL
+- Environment variables best practices
+- Monitoring and logging
+- Security hardening
+- Update strategies
+- Troubleshooting guide
+
+## Usage
+
+### Run MCP Server (Standalone)
+
+```bash
+# Stdio transport
+python server.py
+
+# Or with fastmcp CLI
+fastmcp run server.py
+```
+
+### Configure in Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "r2r": {
+      "command": "python",
+      "args": ["/absolute/path/to/mcp-server/server.py"],
+      "env": {
         "R2R_BASE_URL": "http://localhost:7272",
-        "API_KEY": "your_api_key"
+        "API_KEY": "your_api_key_here"
       }
     }
   }

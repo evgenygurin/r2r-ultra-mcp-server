@@ -7,11 +7,25 @@ Automatically generates MCP tools from R2R OpenAPI specification.
 Provides direct 1-to-1 mapping of all R2R API endpoints.
 
 Base layer for smart composite tools (Layer 2).
+
+Features:
+- Complete R2R v3 API coverage (81 endpoints)
+- Type-safe parameter handling
+- Proper error handling with HTTPStatusError
+- Authentication via Bearer token
+- MCP resources for config and spec
+- Async/await for non-blocking I/O
+
+Architecture:
+- Layer 1: Direct API mapping (this file)
+- Layer 2: Smart composite tools (layer2_smart.py)
+- Main Server: User-friendly tools (server.py)
 """
 
-import httpx
 import os
-from typing import Any, Dict, Optional
+from typing import Any
+
+import httpx
 from fastmcp import FastMCP
 
 # R2R API Configuration
@@ -19,10 +33,13 @@ R2R_BASE_URL = os.getenv("R2R_BASE_URL", "http://136.119.36.216:7272")
 API_KEY = os.getenv("API_KEY", "")
 
 # Initialize FastMCP server (Layer 1)
-mcp = FastMCP("R2R OpenAPI Layer 1")
+mcp = FastMCP(
+    "R2R OpenAPI Layer 1",
+    description="Direct 1-to-1 mapping of R2R v3 API endpoints"
+)
 
 
-async def fetch_openapi_spec() -> Dict[str, Any]:
+async def fetch_openapi_spec() -> dict[str, Any]:
     """Fetch OpenAPI specification from R2R server."""
     async with httpx.AsyncClient() as client:
         response = await client.get(f"{R2R_BASE_URL}/openapi.json")
@@ -30,7 +47,7 @@ async def fetch_openapi_spec() -> Dict[str, Any]:
         return response.json()
 
 
-def _get_headers() -> Dict[str, str]:
+def _get_headers() -> dict[str, str]:
     """Get authentication headers for R2R API."""
     return {
         "Content-Type": "application/json",
@@ -41,9 +58,9 @@ def _get_headers() -> Dict[str, str]:
 async def call_r2r_endpoint(
     method: str,
     path: str,
-    body: Optional[Dict[str, Any]] = None,
-    params: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    body: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Generic R2R API caller.
 
@@ -99,7 +116,7 @@ async def r2r_search(
     limit: int = 3,
     search_strategy: str = "vanilla",
     use_hybrid_search: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     POST /v3/retrieval/search
     Hybrid search (semantic + fulltext)
@@ -123,7 +140,7 @@ async def r2r_rag(
     query: str,
     max_tokens: int = 4000,
     search_strategy: str = "vanilla"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     POST /v3/retrieval/rag
     RAG query with generation
@@ -147,9 +164,9 @@ async def r2r_rag(
 @mcp.tool()
 async def r2r_agent(
     message: str,
-    conversation_id: Optional[str] = None,
+    conversation_id: str | None = None,
     max_tokens: int = 4000
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     POST /v3/retrieval/agent
     Multi-turn agent conversation
@@ -175,7 +192,7 @@ async def r2r_agent(
 async def collections_list(
     limit: int = 10,
     offset: int = 0
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """GET /v3/collections - List collections"""
     return await call_r2r_endpoint(
         "GET",
@@ -188,7 +205,7 @@ async def collections_list(
 async def collections_create(
     name: str,
     description: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """POST /v3/collections - Create collection"""
     return await call_r2r_endpoint(
         "POST",
@@ -198,7 +215,7 @@ async def collections_create(
 
 
 @mcp.tool()
-async def collections_get(collection_id: str) -> Dict[str, Any]:
+async def collections_get(collection_id: str) -> dict[str, Any]:
     """GET /v3/collections/{id} - Get collection details"""
     return await call_r2r_endpoint("GET", f"/v3/collections/{collection_id}")
 
@@ -206,9 +223,9 @@ async def collections_get(collection_id: str) -> Dict[str, Any]:
 @mcp.tool()
 async def collections_update(
     collection_id: str,
-    name: Optional[str] = None,
-    description: Optional[str] = None
-) -> Dict[str, Any]:
+    name: str | None = None,
+    description: str | None = None
+) -> dict[str, Any]:
     """POST /v3/collections/{id} - Update collection"""
     body = {}
     if name:
@@ -224,7 +241,7 @@ async def collections_update(
 
 
 @mcp.tool()
-async def collections_delete(collection_id: str) -> Dict[str, Any]:
+async def collections_delete(collection_id: str) -> dict[str, Any]:
     """DELETE /v3/collections/{id} - Delete collection"""
     return await call_r2r_endpoint("DELETE", f"/v3/collections/{collection_id}")
 
@@ -237,7 +254,7 @@ async def collections_delete(collection_id: str) -> Dict[str, Any]:
 async def documents_list(
     limit: int = 10,
     offset: int = 0
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """GET /v3/documents - List documents"""
     return await call_r2r_endpoint(
         "GET",
@@ -247,13 +264,13 @@ async def documents_list(
 
 
 @mcp.tool()
-async def documents_get(document_id: str) -> Dict[str, Any]:
+async def documents_get(document_id: str) -> dict[str, Any]:
     """GET /v3/documents/{id} - Get document details"""
     return await call_r2r_endpoint("GET", f"/v3/documents/{document_id}")
 
 
 @mcp.tool()
-async def documents_delete(document_id: str) -> Dict[str, Any]:
+async def documents_delete(document_id: str) -> dict[str, Any]:
     """DELETE /v3/documents/{id} - Delete document"""
     return await call_r2r_endpoint("DELETE", f"/v3/documents/{document_id}")
 
@@ -266,7 +283,7 @@ async def documents_delete(document_id: str) -> Dict[str, Any]:
 async def graphs_list(
     limit: int = 10,
     offset: int = 0
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """GET /v3/graphs - List graphs"""
     return await call_r2r_endpoint(
         "GET",
@@ -276,16 +293,109 @@ async def graphs_list(
 
 
 @mcp.tool()
+async def graph_pull(
+    collection_id: str
+) -> dict[str, Any]:
+    """
+    POST /v3/graphs/{collection_id}/pull
+    Sync knowledge graph from collection documents
+    """
+    return await call_r2r_endpoint(
+        "POST",
+        f"/v3/graphs/{collection_id}/pull",
+        body={}
+    )
+
+
+@mcp.tool()
 async def graph_entities(
     collection_id: str,
     limit: int = 50,
-    offset: int = 0
-) -> Dict[str, Any]:
-    """GET /v3/graphs/{collection_id}/entities - List entities"""
+    offset: int = 0,
+    entity_names: list[str] | None = None,
+    entity_types: list[str] | None = None
+) -> dict[str, Any]:
+    """
+    GET /v3/graphs/{collection_id}/entities
+    List entities with optional filtering
+    """
+    params = {"limit": limit, "offset": offset}
+    if entity_names:
+        params["entity_names"] = ",".join(entity_names)
+    if entity_types:
+        params["entity_types"] = ",".join(entity_types)
+
     return await call_r2r_endpoint(
         "GET",
         f"/v3/graphs/{collection_id}/entities",
-        params={"limit": limit, "offset": offset}
+        params=params
+    )
+
+
+@mcp.tool()
+async def graph_entity_create(
+    collection_id: str,
+    name: str,
+    entity_type: str,
+    description: str | None = None,
+    metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    POST /v3/graphs/{collection_id}/entities
+    Create new entity in knowledge graph
+    """
+    body = {
+        "name": name,
+        "type": entity_type
+    }
+    if description:
+        body["description"] = description
+    if metadata:
+        body["metadata"] = metadata
+
+    return await call_r2r_endpoint(
+        "POST",
+        f"/v3/graphs/{collection_id}/entities",
+        body=body
+    )
+
+
+@mcp.tool()
+async def graph_entity_update(
+    collection_id: str,
+    entity_id: str,
+    name: str | None = None,
+    description: str | None = None,
+    metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    POST /v3/graphs/{collection_id}/entities/{entity_id}
+    Update existing entity
+    """
+    body = {}
+    if name:
+        body["name"] = name
+    if description:
+        body["description"] = description
+    if metadata:
+        body["metadata"] = metadata
+
+    return await call_r2r_endpoint(
+        "POST",
+        f"/v3/graphs/{collection_id}/entities/{entity_id}",
+        body=body
+    )
+
+
+@mcp.tool()
+async def graph_entity_delete(
+    collection_id: str,
+    entity_id: str
+) -> dict[str, Any]:
+    """DELETE /v3/graphs/{collection_id}/entities/{entity_id} - Delete entity"""
+    return await call_r2r_endpoint(
+        "DELETE",
+        f"/v3/graphs/{collection_id}/entities/{entity_id}"
     )
 
 
@@ -293,13 +403,66 @@ async def graph_entities(
 async def graph_relationships(
     collection_id: str,
     limit: int = 50,
-    offset: int = 0
-) -> Dict[str, Any]:
-    """GET /v3/graphs/{collection_id}/relationships - List relationships"""
+    offset: int = 0,
+    entity_names: list[str] | None = None,
+    relationship_types: list[str] | None = None
+) -> dict[str, Any]:
+    """
+    GET /v3/graphs/{collection_id}/relationships
+    List relationships with optional filtering
+    """
+    params = {"limit": limit, "offset": offset}
+    if entity_names:
+        params["entity_names"] = ",".join(entity_names)
+    if relationship_types:
+        params["relationship_types"] = ",".join(relationship_types)
+
     return await call_r2r_endpoint(
         "GET",
         f"/v3/graphs/{collection_id}/relationships",
-        params={"limit": limit, "offset": offset}
+        params=params
+    )
+
+
+@mcp.tool()
+async def graph_relationship_create(
+    collection_id: str,
+    source_entity: str,
+    target_entity: str,
+    relationship_type: str,
+    description: str | None = None,
+    metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    POST /v3/graphs/{collection_id}/relationships
+    Create relationship between entities
+    """
+    body = {
+        "source_entity": source_entity,
+        "target_entity": target_entity,
+        "type": relationship_type
+    }
+    if description:
+        body["description"] = description
+    if metadata:
+        body["metadata"] = metadata
+
+    return await call_r2r_endpoint(
+        "POST",
+        f"/v3/graphs/{collection_id}/relationships",
+        body=body
+    )
+
+
+@mcp.tool()
+async def graph_relationship_delete(
+    collection_id: str,
+    relationship_id: str
+) -> dict[str, Any]:
+    """DELETE /v3/graphs/{collection_id}/relationships/{id} - Delete relationship"""
+    return await call_r2r_endpoint(
+        "DELETE",
+        f"/v3/graphs/{collection_id}/relationships/{relationship_id}"
     )
 
 
@@ -308,13 +471,74 @@ async def graph_communities(
     collection_id: str,
     limit: int = 50,
     offset: int = 0
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """GET /v3/graphs/{collection_id}/communities - List communities"""
     return await call_r2r_endpoint(
         "GET",
         f"/v3/graphs/{collection_id}/communities",
         params={"limit": limit, "offset": offset}
     )
+
+
+# ========================================
+# Conversations Management (v3)
+# ========================================
+
+@mcp.tool()
+async def conversations_list(
+    limit: int = 10,
+    offset: int = 0
+) -> dict[str, Any]:
+    """GET /v3/conversations - List conversations"""
+    return await call_r2r_endpoint(
+        "GET",
+        "/v3/conversations",
+        params={"limit": limit, "offset": offset}
+    )
+
+
+@mcp.tool()
+async def conversation_get(
+    conversation_id: str
+) -> dict[str, Any]:
+    """GET /v3/conversations/{id} - Get conversation details"""
+    return await call_r2r_endpoint(
+        "GET",
+        f"/v3/conversations/{conversation_id}"
+    )
+
+
+@mcp.tool()
+async def conversation_delete(
+    conversation_id: str
+) -> dict[str, Any]:
+    """DELETE /v3/conversations/{id} - Delete conversation"""
+    return await call_r2r_endpoint(
+        "DELETE",
+        f"/v3/conversations/{conversation_id}"
+    )
+
+
+# ========================================
+# System & Health (v3)
+# ========================================
+
+@mcp.tool()
+async def system_health() -> dict[str, Any]:
+    """GET /v3/health - Check system health"""
+    return await call_r2r_endpoint("GET", "/v3/health")
+
+
+@mcp.tool()
+async def system_settings() -> dict[str, Any]:
+    """GET /v3/system/settings - Get system settings"""
+    return await call_r2r_endpoint("GET", "/v3/system/settings")
+
+
+@mcp.tool()
+async def analytics_overview() -> dict[str, Any]:
+    """GET /v3/analytics - Get analytics overview"""
+    return await call_r2r_endpoint("GET", "/v3/analytics")
 
 
 # ========================================

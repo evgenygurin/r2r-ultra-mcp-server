@@ -1,4 +1,33 @@
 {
+  "mcpServers": {
+    "r2r-layer1": {
+      "command": "python",
+      "args": ["/Users/laptop/dev/r2r-fastmcp/mcp-server/layer1_openapi.py"],
+      "env": {
+        "R2R_BASE_URL": "${R2R_BASE_URL:-https://api.136-119-36-216.nip.io}",
+        "API_KEY": "${API_KEY}"
+      },
+      "description": "R2R Layer 1: OpenAPI Basic Tools - 1-to-1 mapping of all R2R API endpoints"
+    },
+    "r2r-smart": {
+      "command": "python",
+      "args": ["/Users/laptop/dev/r2r-fastmcp/mcp-server/layer2_smart.py"],
+      "env": {
+        "R2R_BASE_URL": "${R2R_BASE_URL:-https://api.136-119-36-216.nip.io}",
+        "API_KEY": "${API_KEY}"
+      },
+      "description": "R2R Layer 2: Smart Composite Tools - intelligent workflows and multi-step operations"
+    },
+    "r2r": {
+      "command": "python",
+      "args": ["/Users/laptop/dev/r2r-fastmcp/mcp-server/server.py"],
+      "env": {
+        "R2R_BASE_URL": "${R2R_BASE_URL:-https://api.136-119-36-216.nip.io}",
+        "API_KEY": "${API_KEY}"
+      },
+      "description": "R2R Main Server: Core tools (search, rag, agent) with workflows and examples"
+    }
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -19,6 +48,15 @@
             "command": ".claude/hooks/PreToolUse/log-r2r-commands.md"
           }
         ]
+      },
+      {
+        "matcher": "user-r2r*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/PreToolUse/log-mcp-calls.md"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -28,6 +66,15 @@
           {
             "type": "command",
             "command": ".claude/hooks/PostToolUse/log-r2r-results.md"
+          }
+        ]
+      },
+      {
+        "matcher": "user-r2r*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/PostToolUse/log-mcp-results.md"
           }
         ]
       }
@@ -41,7 +88,8 @@
       "Grep",
       "Glob",
       "LS",
-      "SemanticSearch"
+      "SemanticSearch",
+      "user-r2r*"
     ],
     "deniedTools": [
       "Bash(rm:*)",
@@ -59,7 +107,10 @@
     "autoLoad": [
       "r2r-document-analyzer",
       "r2r-knowledge-explorer-skill",
-      "r2r-research-assistant-skill"
+      "r2r-research-assistant-skill",
+      "r2r-mcp-search-skill",
+      "r2r-mcp-rag-skill",
+      "r2r-mcp-agent-skill"
     ]
   },
   "agents": {
@@ -67,7 +118,9 @@
     "projectAgents": [
       "research-assistant",
       "doc-analyst",
-      "knowledge-explorer"
+      "knowledge-explorer",
+      "mcp-research-agent",
+      "mcp-knowledge-agent"
     ]
   },
   "commands": {
@@ -82,6 +135,10 @@
       "r2r-examples",
       "r2r-workflows",
       "r2r-quick",
+      "r2r-mcp",
+      "r2r-mcp-search",
+      "r2r-mcp-rag",
+      "r2r-mcp-agent",
       "cc",
       "cc-hooks",
       "cc-commands",

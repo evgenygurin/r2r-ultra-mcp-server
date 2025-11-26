@@ -1,1 +1,3 @@
-"""Tests for R2R FastMCP Server"""
+"""
+Tests for R2R Ultra MCP Server.
+"""

@@ -1,146 +1,67 @@
-"""Tests for R2R FastMCP Server"""
-import pytest
-from unittest.mock import AsyncMock, patch
-import sys
-import os
-
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from server import (
-    r2r_search,
-    r2r_rag,
-    r2r_agent,
-    r2r_collections_list,
-    r2r_collections_create,
-    r2r_examples,
-    r2r_workflows,
-    r2r_quick,
-)
+"""
+Unit tests for R2R Ultra MCP Server.
+"""
 
 
-@pytest.fixture
-def mock_make_request():
-    """Mock _make_request function"""
-    with patch("server._make_request", new_callable=AsyncMock) as mock:
-        yield mock
+def test_server_initialization(mcp_server):
+    """Test that server initializes correctly."""
+    assert mcp_server is not None
+    assert mcp_server.name == "R2R Ultra MCP Server v3.0"
 
 
-@pytest.mark.asyncio
-async def test_r2r_search(mock_make_request):
-    """Test r2r_search tool"""
-    mock_make_request.return_value = {
-        "results": {
-            "chunk_search_results": [
-                {"id": "test123", "score": 0.95, "text": "Test result"}
-            ]
-        }
-    }
+def test_server_has_tools(mcp_server):
+    """Test that server has registered tools."""
+    tools = mcp_server._list_tools()
+    assert len(tools) > 0
 
-    result = await r2r_search("test query", limit=3)
+    tool_names = [tool.name for tool in tools]
 
-    assert "results" in result
-    mock_make_request.assert_called_once()
-    args = mock_make_request.call_args
-    assert args[0][1] == "/v3/retrieval/search"
-    assert args[1]["data"]["query"] == "test query"
-    assert args[1]["data"]["limit"] == 3
+    # Check for expected tools
+    assert "get_server_capabilities" in tool_names
+    assert "r2r_search_with_progress" in tool_names
+    assert "r2r_rag_with_sampling" in tool_names
+    assert "batch_document_analysis" in tool_names
+    assert "smart_collection_search" in tool_names
+    assert "get_performance_stats" in tool_names
+    assert "clear_cache" in tool_names
 
 
-@pytest.mark.asyncio
-async def test_r2r_rag(mock_make_request):
-    """Test r2r_rag tool"""
-    mock_make_request.return_value = {
-        "results": {
-            "generated_answer": "Test answer",
-            "citations": []
-        }
-    }
+def test_server_has_resources(mcp_server):
+    """Test that server has registered resources."""
+    resources = mcp_server._list_resources()
+    assert len(resources) > 0
 
-    result = await r2r_rag("What is FastMCP?", max_tokens=4000)
+    resource_uris = [r.uri for r in resources]
 
-    assert "results" in result
-    mock_make_request.assert_called_once()
-    args = mock_make_request.call_args
-    assert args[0][1] == "/v3/retrieval/rag"
-    assert args[1]["data"]["query"] == "What is FastMCP?"
+    # Check for expected resources
+    assert "r2r://server/stats" in resource_uris
+    assert "r2r://config" in resource_uris
 
 
-@pytest.mark.asyncio
-async def test_r2r_agent(mock_make_request):
-    """Test r2r_agent tool"""
-    mock_make_request.return_value = {
-        "results": {
-            "response": "Agent response",
-            "conversation_id": "conv_abc123"
-        }
-    }
+def test_server_has_prompts(mcp_server):
+    """Test that server has registered prompts."""
+    prompts = mcp_server._list_prompts()
+    assert len(prompts) > 0
 
-    result = await r2r_agent("Research question", mode="research")
+    prompt_names = [p.name for p in prompts]
 
-    assert "results" in result
-    mock_make_request.assert_called_once()
-    args = mock_make_request.call_args
-    assert args[0][1] == "/v3/retrieval/agent"
+    # Check for expected prompts
+    assert "research_question_prompt" in prompt_names
+    assert "code_review_prompt" in prompt_names
+    assert "data_analysis_prompt" in prompt_names
 
 
-@pytest.mark.asyncio
-async def test_r2r_collections_list(mock_make_request):
-    """Test r2r_collections_list tool"""
-    mock_make_request.return_value = {
-        "results": [
-            {"id": "col1", "name": "Test Collection"}
-        ]
-    }
+def test_server_has_middleware(mcp_server):
+    """Test that server has middleware configured."""
+    assert hasattr(mcp_server, '_middleware')
+    middleware = mcp_server._middleware
+    assert len(middleware) == 5  # 5 middleware components
 
-    result = await r2r_collections_list(limit=10)
+    middleware_classes = [m.__class__.__name__ for m in middleware]
 
-    assert "results" in result
-    mock_make_request.assert_called_once()
-    args = mock_make_request.call_args
-    assert args[0][1] == "/v3/collections"
-
-
-@pytest.mark.asyncio
-async def test_r2r_collections_create(mock_make_request):
-    """Test r2r_collections_create tool"""
-    mock_make_request.return_value = {
-        "results": {"id": "col_new", "name": "New Collection"}
-    }
-
-    result = await r2r_collections_create("New Collection", "Description")
-
-    assert "results" in result
-    mock_make_request.assert_called_once()
-    args = mock_make_request.call_args
-    assert args[1]["data"]["name"] == "New Collection"
-
-
-@pytest.mark.asyncio
-async def test_r2r_examples():
-    """Test r2r_examples tool"""
-    result = await r2r_examples(category="search")
-
-    assert "category" in result
-    assert result["category"] == "search"
-    assert "examples" in result
-    assert len(result["examples"]) > 0
-
-
-@pytest.mark.asyncio
-async def test_r2r_workflows():
-    """Test r2r_workflows tool"""
-    result = await r2r_workflows("invalid_workflow")
-
-    assert "available_workflows" in result
-    assert "status" in result
-
-
-@pytest.mark.asyncio
-async def test_r2r_quick():
-    """Test r2r_quick tool"""
-    result = await r2r_quick("status")
-
-    assert "task" in result
-    assert result["task"] == "status"
-    assert "r2r_url" in result
+    # Check for expected middleware
+    assert "LoggingMiddleware" in middleware_classes
+    assert "TimingMiddleware" in middleware_classes
+    assert "RateLimitingMiddleware" in middleware_classes
+    assert "ErrorHandlingMiddleware" in middleware_classes
+    assert "CachingMiddleware" in middleware_classes
