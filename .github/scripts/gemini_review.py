@@ -13,7 +13,19 @@ def main():
     
     # Configure Gemini API (AI Studio, not Vertex AI)
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    # Use a more specific model configuration for AI Studio
+    generation_config = {
+        "temperature": 0.7,
+        "top_p": 0.8,
+        "top_k": 40,
+        "max_output_tokens": 8192,
+    }
+    
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        generation_config=generation_config
+    )
     
     # Read project context from CLAUDE.md
     project_context = ""
@@ -144,11 +156,20 @@ def main():
             prompt_parts.append(content)
             prompt = "\n".join(prompt_parts)
             
-            response = model.generate_content(prompt)
-            reviews.append(f"## 📄 {filepath}\n\n{response.text}\n\n---\n")
+            try:
+                response = model.generate_content(prompt)
+                if response.text:
+                    reviews.append(f"## 📄 {filepath}\n\n{response.text}\n\n---\n")
+                else:
+                    reviews.append(f"## 📄 {filepath}\n\n⚠️ **Предупреждение**: Gemini API не вернул ответ. Возможно, превышены лимиты или проблема с настройкой.\n\n**Краткий обзор вручную:**\n- Файл содержит {len(content.split())} слов\n- Проверьте техническую точность API endpoints\n- Убедитесь в консистентности терминологии\n- Проверьте форматирование и эмодзи в заголовках\n\n---\n")
+            except Exception as api_error:
+                if "401" in str(api_error) and "CREDENTIALS_MISSING" in str(api_error):
+                    reviews.append(f"## 📄 {filepath}\n\n⚠️ **Gemini API недоступен**: {str(api_error)}\n\n**Автоматическая проверка:**\n- ✅ Файл читается корректно ({len(content.split())} слов)\n- 📝 Требуется ручная проверка технической точности\n- 🔍 Проверьте внутренние ссылки и форматирование\n- 🎯 Убедитесь в наличии эмодзи в H2 заголовках\n\n---\n")
+                else:
+                    reviews.append(f"## 📄 {filepath}\n\n❌ **Ошибка API**: {str(api_error)}\n\n---\n")
             
         except Exception as e:
-            reviews.append(f"## 📄 {filepath}\n\n❌ **Ошибка при обработке**: {str(e)}\n\n---\n")
+            reviews.append(f"## 📄 {filepath}\n\n❌ **Ошибка при обработке файла**: {str(e)}\n\n---\n")
     
     # Third pass: check consistency across files (if multiple docs files changed)
     if len(changed_files) > 1:
@@ -176,8 +197,14 @@ def main():
 - 💡 Рекомендации по улучшению консистентности
 """
                 
-                consistency_response = model.generate_content(consistency_prompt)
-                reviews.insert(0, f"## 🔗 Проверка консистентности между файлами\n\n{consistency_response.text}\n\n---\n")
+                try:
+                    consistency_response = model.generate_content(consistency_prompt)
+                    if consistency_response.text:
+                        reviews.insert(0, f"## 🔗 Проверка консистентности между файлами\n\n{consistency_response.text}\n\n---\n")
+                    else:
+                        reviews.insert(0, f"## 🔗 Проверка консистентности между файлами\n\n⚠️ **Gemini API недоступен для проверки консистентности**\n\nПроверьте вручную:\n- Единообразие терминологии между файлами\n- Отсутствие противоречий в описаниях API\n- Согласованность примеров кода\n\n---\n")
+                except Exception as api_error:
+                    reviews.insert(0, f"## 🔗 Проверка консистентности между файлами\n\n❌ **Ошибка API**: {str(api_error)}\n\n---\n")
         except Exception as e:
             print(f"⚠️  Could not perform consistency check: {e}")
     
