@@ -1,0 +1,115 @@
+name: Gemini Documentation Review
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docs/**/*.md'
+      - '.claude/**/*.md'
+      - 'CLAUDE.md'
+      - 'README.md'
+
+jobs:
+  review-docs:
+    name: Review Documentation Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get changed markdown files
+        id: changed-files
+        run: |
+          # Get list of changed .md files
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.md$' > changed_files.txt || true
+          
+          if [ -s changed_files.txt ]; then
+            echo "📝 Changed documentation files: $(wc -l < changed_files.txt)"
+            cat changed_files.txt
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No markdown files changed"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Setup Python
+        if: steps.changed-files.outputs.has_changes == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        if: steps.changed-files.outputs.has_changes == 'true'
+        run: |
+          pip install google-generativeai requests
+      
+      - name: Review documentation with Gemini
+        if: steps.changed-files.outputs.has_changes == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        continue-on-error: true
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "⚠️ GEMINI_API_KEY secret not configured. Creating basic review..."
+            cat > review_output.md << 'EOF'
+          # 📝 Basic Documentation Review
+          
+          **Проверено файлов:** $(wc -l < changed_files.txt)
+          
+          **Статус Gemini API:** ❌ Не настроен (требуется GEMINI_API_KEY secret)
+          
+          ## 🔍 Базовая проверка
+          
+          ### Измененные файлы:
+          $(cat changed_files.txt | sed 's/^/- /')
+          
+          ### ✅ Автоматические проверки пройдены:
+          - Файлы в формате Markdown
+          - Относятся к документации проекта
+          
+          ### 📋 Требуется ручная проверка:
+          - Техническая точность API endpoints и параметров
+          - Консистентность терминологии (русский + английские термины)
+          - Наличие эмодзи в заголовках H2 (🎯, 📁, 🔍, ⚙️, 📚, 🔗, ⚠️, ✅, ❌)
+          - Корректность внутренних ссылок (относительные пути)
+          - Правильность примеров кода
+          
+          ---
+          
+          *Для полного автоматического обзора требуется настройка GEMINI_API_KEY secret.*
+          EOF
+          else
+            echo "🤖 Running Gemini-powered review..."
+            python3 .github/scripts/gemini_review.py || echo "⚠️ Gemini review failed"
+          fi
+      
+      - name: Post review as comment
+        if: steps.changed-files.outputs.has_changes == 'true' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            if (!fs.existsSync('review_output.md')) {
+              console.log('⚠️ No review output found');
+              return;
+            }
+            
+            const review = fs.readFileSync('review_output.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: review
+            });
