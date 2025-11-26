@@ -57,6 +57,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+        continue-on-error: true
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
             echo "⚠️ GEMINI_API_KEY secret not configured. Creating basic review..."
@@ -89,7 +90,7 @@ jobs:
           EOF
           else
             echo "🤖 Running Gemini-powered review..."
-            python3 .github/scripts/gemini_review.py
+            python3 .github/scripts/gemini_review.py || echo "⚠️ Gemini review failed"
           fi
       
       - name: Post review as comment
@@ -100,13 +101,13 @@ jobs:
             const fs = require('fs');
             
             if (!fs.existsSync('review_output.md')) {
-              console.log('No review output found');
+              console.log('⚠️ No review output found');
               return;
             }
             
             const review = fs.readFileSync('review_output.md', 'utf8');
             
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
