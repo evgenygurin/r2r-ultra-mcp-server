@@ -65,8 +65,8 @@ r2r-fastmcp/
 
 **Конфигурация:** `.claude/config/.env`
 ```bash
-R2R_BASE_URL=https://api.136-119-36-216.nip.io
-API_KEY=your-api-key-here
+R2R_BASE_URL=<your-r2r-api-url>
+API_KEY=<your-api-key>
 ```
 
 **Модульный CLI (8 команд, 48 подкоманд):**
@@ -169,7 +169,7 @@ du -sh docs/r2r docs/fastmcp docs/claude_code
 └────────┬────────┘
          │ curl + jq → JSON
 ┌────────▼────────┐
-│      R2R        │  https://api.136-119-36-216.nip.io
+│      R2R        │  $R2R_BASE_URL
 │   (Backend)     │  8 команд, 48 подкоманд
 └─────────────────┘
 ```
@@ -347,8 +347,8 @@ fd -e md authentication docs/
 ```bash
 # Создай .claude/config/.env
 cat > .claude/config/.env << 'EOF'
-R2R_BASE_URL=https://api.136-119-36-216.nip.io
-API_KEY=your-api-key-here
+R2R_BASE_URL=<your-r2r-api-url>
+API_KEY=<your-api-key>
 EOF
 ```
 
