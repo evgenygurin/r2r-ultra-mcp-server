@@ -513,15 +513,461 @@ cat ~/.claude/r2r-log.txt
 - `.claude/agents/` - существующие агенты
 - `.claude/skills/` - существующие skills описания
 
+## 🚀 Продвинутые возможности интеграции
+
+### Plan Mode Integration
+
+**Концепция:** Использование Plan mode для сложных R2R workflows
+
+**Примеры использования:**
+```bash
+# Автоматическое включение Plan mode для:
+- Создание multi-document knowledge graphs
+- Batch processing больших коллекций
+- Complex research workflows с несколькими источниками
+- Document analysis с entity extraction + community detection
+```
+
+**Реализация:**
+- Plan subagent автоматически активируется для задач >3 шагов
+- Использует Sonnet для планирования, Haiku для выполнения
+- Визуализация процесса через Tab key
+- TodoWrite integration для отслеживания прогресса
+
+### Context Optimization Strategies
+
+**Проблема:** Large document collections могут превышать context limits
+
+**Решения:**
+
+1. **Explore Subagent для поиска релевантных документов**
+   ```bash
+   # Автоматическая активация при:
+   "Find all documents about machine learning in my collection"
+   "Where are the references to transformers architecture?"
+   ```
+
+2. **Compact command для сжатия контекста**
+   ```bash
+   /compact  # Shrinks conversation size
+   ```
+
+3. **Selective file reading через agents**
+   - Code Explorer идентифицирует ключевые документы
+   - Читаем только релевантные части
+   - Используем document summaries из R2R
+
+### Enterprise Features
+
+**Централизованные политики безопасности:**
+
+**settings.json (enterprise-managed):**
+```json
+{
+  "permissions": {
+    "allowedTools": [
+      "Read(**/*.{md,txt,json})",
+      "Bash(r2r:*)",
+      "Bash(git:*)"
+    ],
+    "deniedTools": [
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Edit(/config/*)",
+      "Write(/secrets/*)"
+    ]
+  },
+  "permissionMode": "manual",
+  "sandbox": {
+    "allowUnsandboxedCommands": false
+  },
+  "companyAnnouncements": {
+    "enabled": true,
+    "message": "R2R Integration: Use /r2r-* commands for document operations. Check CLAUDE.md for guidelines."
+  }
+}
+```
+
+**Compliance & Auditing:**
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash(r2r:*)",
+      "hooks": [{
+        "type": "command",
+        "command": "echo \"$(date -Iseconds) USER=${USER} COMMAND=${CLAUDE_TOOL_INPUT}\" >> /var/log/claude-r2r-audit.log"
+      }]
+    }],
+    "PostToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "jq -r '{timestamp: now | todate, user: env.USER, result: .tool_result}' | tee -a ~/.claude/compliance.jsonl"
+      }]
+    }]
+  }
+}
+```
+
+### Plugin Development для R2R
+
+**Идея:** Создать официальный R2R plugin для marketplace
+
+**Структура plugin:**
+```
+claude-plugins/
+└── r2r-integration/
+    ├── plugin.json
+    ├── README.md
+    ├── commands/
+    │   ├── r2r-search.md
+    │   ├── r2r-rag.md
+    │   └── r2r-agent.md
+    ├── agents/
+    │   ├── research-assistant.md
+    │   └── doc-analyst.md
+    ├── skills/
+    │   └── r2r-document-analyzer/
+    │       ├── SKILL.md
+    │       └── EXAMPLES.md
+    └── hooks/
+        └── SessionStart/
+            └── check-r2r-status.md
+```
+
+**plugin.json:**
+```json
+{
+  "name": "r2r-integration",
+  "version": "1.0.0",
+  "description": "Full R2R v3 integration for document management, RAG, and knowledge graphs",
+  "author": "R2R Team",
+  "homepage": "https://github.com/your-org/claude-r2r-plugin",
+  "commands": ["r2r-search", "r2r-rag", "r2r-agent", "r2r-collections", "r2r-upload"],
+  "agents": ["research-assistant", "doc-analyst", "knowledge-explorer"],
+  "skills": ["r2r-document-analyzer", "r2r-knowledge-explorer"],
+  "hooks": ["SessionStart/check-r2r-status"],
+  "dependencies": {
+    "bash": ">=5.0",
+    "jq": ">=1.6",
+    "curl": ">=7.68"
+  },
+  "config": {
+    "requiredEnvVars": ["R2R_BASE_URL", "API_KEY"]
+  }
+}
+```
+
+### Interactive Question Tool Integration
+
+**Концепция:** Использование interactive questions для улучшения R2R workflows
+
+**Примеры:**
+
+1. **Document Upload Clarification:**
+   ```markdown
+   Claude: "Before uploading this document, I need clarification:
+   
+   1. Which collection should I use?
+      - Existing: 'research-papers' (15 docs)
+      - Existing: 'technical-docs' (42 docs)  
+      - Create new collection?
+   
+   2. Should I extract entities and relationships immediately?
+      - Yes (takes 2-3 min, enables graph queries)
+      - No (faster, can extract later)
+   
+   3. Ingestion mode:
+      - hi-res (thorough, slower, with summaries)
+      - fast (quick, minimal enrichment)
+   "
+   ```
+
+2. **Research Query Optimization:**
+   ```markdown
+   Claude: "For this research query, I can use:
+   
+   1. RAG mode (fast, straightforward answers)
+   2. Research mode (deeper analysis with reasoning)
+   
+   The query seems complex - would you prefer research mode?
+   Also, should I include web search for up-to-date information?"
+   ```
+
+### Model Selection Strategy
+
+**Рекомендации по выбору моделей для R2R операций:**
+
+| Операция | Модель | Обоснование |
+|----------|--------|-------------|
+| Document upload | Haiku 4.5 | Быстрая обработка метаданных |
+| Simple search | Haiku 4.5 | Достаточно для форматирования результатов |
+| RAG generation | Sonnet 4.5 | Качественные ответы с citations |
+| Research mode | Sonnet 4.5 | Reasoning требует мощной модели |
+| Graph exploration | Haiku 4.5 + Sonnet | Haiku для queries, Sonnet для анализа |
+| Batch processing | Haiku 4.5 | Cost-effective для множества операций |
+| Planning workflows | Sonnet 4.5 | Сложное планирование multi-step tasks |
+
+**Конфигурация в commands:**
+```yaml
+---
+name: r2r-research
+model: sonnet  # Force Sonnet for research mode
+---
+```
+
+### Workflow Templates
+
+**Шаблоны для типичных задач:**
+
+#### 1. Academic Research Workflow
+```bash
+# Phase 1: Upload papers
+/r2r-upload paper1.pdf --collection research-papers
+/r2r-upload paper2.pdf --collection research-papers
+
+# Phase 2: Extract knowledge graph
+/r2r-agent "Extract entities and relationships from all papers about transformers"
+
+# Phase 3: Research synthesis
+/r2r-agent --mode research "Synthesize findings about transformer architectures, include reasoning steps"
+
+# Phase 4: Community detection
+.claude/scripts/r2r graph communities build <collection_id>
+
+# Phase 5: Insight generation
+/r2r-agent "What are the main research clusters in transformer papers?"
+```
+
+#### 2. Code Documentation Analysis
+```bash
+# Phase 1: Upload documentation
+/r2r-workflows upload-batch docs/*.md --collection code-docs
+
+# Phase 2: Create knowledge graph
+/r2r-agent "Build knowledge graph of API relationships"
+
+# Phase 3: Interactive exploration
+/r2r-agent "I'm implementing authentication, show me related docs and examples"
+```
+
+#### 3. Compliance & Audit Trail
+```bash
+# Phase 1: Upload compliance documents
+/r2r-upload compliance-policy.pdf --collection compliance
+
+# Phase 2: Hybrid search with audit
+/r2r-search "data retention policies" --audit
+
+# Phase 3: Generate compliance report
+/r2r-rag "Summarize all data retention policies with citations" --format report
+```
+
+### Performance Optimization
+
+**Best Practices для больших коллекций:**
+
+1. **Batch Operations:**
+   ```bash
+   # Bad: Individual uploads
+   for file in *.pdf; do
+     /r2r-upload "$file"
+   done
+   
+   # Good: Batch workflow
+   /r2r-workflows batch-upload *.pdf --collection my-docs --parallel 5
+   ```
+
+2. **Index Management:**
+   ```bash
+   # Create HNSW index для fast search
+   .claude/scripts/r2r analytics create-index \
+     --table chunks \
+     --method hnsw \
+     --measure cosine_distance \
+     --m 16 \
+     --ef-construction 64
+   ```
+
+3. **Query Optimization:**
+   ```bash
+   # Use vanilla strategy (hyde/rag_fusion не работают)
+   /r2r-search "query" --strategy vanilla --limit 10
+   
+   # Hybrid search для лучших результатов
+   /r2r-search "query" --hybrid --full-text-weight 1 --semantic-weight 5
+   ```
+
+### Integration with GitHub Actions
+
+**Automated document processing:**
+
+**.github/workflows/r2r-sync.yml:**
+```yaml
+name: Sync Docs to R2R
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+
+jobs:
+  sync-r2r:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          claude --version
+      
+      - name: Upload changed docs
+        env:
+          R2R_BASE_URL: ${{ secrets.R2R_BASE_URL }}
+          API_KEY: ${{ secrets.R2R_API_KEY }}
+        run: |
+          # Get changed files
+          git diff --name-only HEAD~1 HEAD | grep '^docs/' > changed.txt
+          
+          # Upload via workflow
+          cat changed.txt | xargs .claude/scripts/workflows.sh batch-upload \
+            --collection github-docs \
+            --ingestion-mode fast
+      
+      - name: Extract entities
+        run: |
+          .claude/scripts/r2r collections extract <collection-id>
+```
+
+### Security Best Practices
+
+**Checklist для production deployment:**
+
+- [ ] **Environment Variables:** API_KEY в .env, НЕ в settings.json
+- [ ] **Permissions:** Minimal necessary tools в allowedTools
+- [ ] **Sandbox Mode:** Enabled на production
+- [ ] **Audit Logging:** PreToolUse/PostToolUse hooks configured
+- [ ] **Rate Limiting:** Implement в bash scripts
+- [ ] **Input Validation:** Sanitize user inputs перед API calls
+- [ ] **Secret Scanning:** Pre-commit hook для обнаружения API keys
+- [ ] **Network Isolation:** R2R API доступен только через VPN
+- [ ] **Backup Strategy:** Regular exports коллекций
+- [ ] **Monitoring:** Alert на failed R2R operations
+
+**Pre-commit hook example:**
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+# Check for exposed API keys
+if git diff --cached --name-only | grep -E '\.(sh|md|json)$' | \
+   xargs grep -E 'API_KEY=sk-|R2R.*=http://.*:[0-9]+'; then
+  echo "Error: Potential API key or URL exposure detected!"
+  exit 1
+fi
+```
+
+### Troubleshooting Guide
+
+**Типичные проблемы и решения:**
+
+#### Problem: "API_KEY not set"
+```bash
+# Solution:
+source .claude/config/.env
+echo $API_KEY  # Verify
+
+# Alternative: Set globally
+export API_KEY=sk-ant-...
+```
+
+#### Problem: "Search strategies hyde/rag_fusion not working"
+```bash
+# Solution: Use vanilla only
+/r2r-search "query" --strategy vanilla
+
+# See: .claude/docs/SEARCH_STRATEGIES.md
+```
+
+#### Problem: "Context limit exceeded"
+```bash
+# Solutions:
+1. Use Explore subagent: "Find relevant docs about X"
+2. Use /compact command
+3. Use document summaries: /r2r-search --summary-only
+4. Filter by collection: --collection-ids <id>
+```
+
+#### Problem: "Hooks not triggering"
+```bash
+# Debug:
+claude --debug  # Enable debug mode
+tail -f ~/.claude/debug.log  # Monitor hooks
+
+# Verify hooks config:
+jq .hooks ~/.claude/settings.json
+
+# Test hook manually:
+bash .claude/hooks/SessionStart/check-r2r.md
+```
+
 ## 📝 Следующие шаги
 
-1. **Сейчас:** Создать все 15 commands
-2. **Затем:** Конвертировать skills в правильный формат
-3. **После:** Обновить agents и hooks
-4. **В конце:** Полная документация + PR
+### Immediate (Next 48 hours)
+1. **✅ Commands:** Создать все 15 slash commands
+2. **✅ Testing:** Тестировать каждую команду отдельно
+3. **✅ Documentation:** Обновить .claude/README.md
+
+### Short-term (Week 1)
+1. **Skills:** Конвертировать в правильный YAML формат
+2. **Agents:** Обновить до актуальной спецификации
+3. **Hooks:** Расширить для полного lifecycle coverage
+
+### Medium-term (Week 2)
+1. **Plugin:** Собрать все компоненты в official R2R plugin
+2. **Marketplace:** Publish в community marketplace
+3. **CI/CD:** GitHub Actions workflows
+
+### Long-term (Month 1)
+1. **Advanced Features:** Plan mode integration, context optimization
+2. **Enterprise:** Centralized policies, compliance reporting
+3. **Performance:** Batch processing, index optimization
+4. **Community:** Documentation, tutorials, examples
+
+## 🎓 Learning Resources
+
+### For Beginners
+- `docs/claude_code/01-overview-and-getting-started.md` - Start here
+- `.claude/commands/r2r-quick.md` - One-line shortcuts
+- `.claude/scripts/examples.sh` - Interactive examples
+
+### For Developers
+- `docs/claude_code/04-commands-and-usage.md` - Custom commands
+- `docs/claude_code/05-hooks-and-customization.md` - Hooks guide
+- `.claude/agents/` - Agent examples
+
+### For Teams
+- `docs/claude_code/10-settings-and-configuration.md` - Settings management
+- `docs/claude_code/12-security-and-permissions.md` - Security policies
+- `.claude/docs/INTEGRATION_PLAN.md` - This document
+
+### Advanced Topics
+- `docs/claude_code/06-subagents.md` - Subagent system
+- `docs/claude_code/07-mcp-integration.md` - MCP servers
+- `docs/claude_code/09-plugins-and-marketplaces.md` - Plugin development
 
 ---
 
-**План составлен:** 2025-01-XX
-**Версия:** 1.0
+**План составлен:** 2025-01-19
+**Версия:** 2.0 (Comprehensive Edition)
 **Статус:** Ready for Implementation 🚀
+
+**Авторы:**
+- Initial plan: Integration team
+- Comprehensive edition: Based on full Claude Code documentation analysis + Context7 research
+
+**Changelog:**
+- v1.0: Basic integration plan
+- v2.0: Added advanced features, enterprise setup, workflows, troubleshooting
