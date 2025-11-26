@@ -147,27 +147,27 @@ class TimingMiddleware(Middleware):
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """Time tool executions."""
-        tool_name = context.request.params.get("name", "unknown")
         start_time = time.perf_counter()
-
+        
         try:
             result = await call_next(context)
             duration = (time.perf_counter() - start_time) * 1000
-
-            # Track statistics
+            
+            # Track statistics (tool_name = "tool")
+            tool_name = "tool"
             self.operation_times[tool_name].append(duration)
             times = self.operation_times[tool_name]
             avg_time = sum(times) / len(times)
-
+            
             self.logger.info(
-                f"⏱️ Tool '{tool_name}' executed in {duration:.2f}ms "
+                f"⏱️ Tool executed in {duration:.2f}ms "
                 f"(avg: {avg_time:.2f}ms, calls: {len(times)})"
             )
-
+            
             return result
         except Exception as e:
             duration = (time.perf_counter() - start_time) * 1000
-            self.logger.error(f"⚠️ Tool '{tool_name}' failed after {duration:.2f}ms: {e}")
+            self.logger.error(f"⚠️ Tool failed after {duration:.2f}ms: {e}")
             raise
 
 
@@ -218,8 +218,8 @@ class ErrorHandlingMiddleware(Middleware):
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """Handle tool execution errors with retry logic."""
-        tool_name = context.request.params.get("name", "unknown")
-
+        tool_name = "tool"
+        
         for attempt in range(self.max_retries + 1):
             try:
                 return await call_next(context)
@@ -272,10 +272,9 @@ class CachingMiddleware(Middleware):
 
     def _get_cache_key(self, context: MiddlewareContext) -> str:
         """Generate cache key from request context."""
-        params = context.request.params
-        tool_name = params.get("name", "")
-        arguments = str(params.get("arguments", {}))
-        return f"{tool_name}:{arguments}"
+        # Use context attributes available in MiddlewareContext
+        cache_key = f"{context.method}:{hash(str(context))}"
+        return cache_key
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """Cache tool results."""
