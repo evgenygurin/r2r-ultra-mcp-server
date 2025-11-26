@@ -337,12 +337,19 @@ mcp = FastMCP(
 )
 
 # Add middleware (order matters: first added runs first)
+# Keep references to middleware for statistics access
 logger.info("🔧 Configuring middleware stack...")
-mcp.add_middleware(LoggingMiddleware())
-mcp.add_middleware(TimingMiddleware())
-mcp.add_middleware(RateLimitingMiddleware(max_requests_per_minute=100))
-mcp.add_middleware(ErrorHandlingMiddleware(max_retries=2))
-mcp.add_middleware(CachingMiddleware(ttl=300))
+logging_middleware = LoggingMiddleware()
+timing_middleware = TimingMiddleware()
+rate_limiting_middleware = RateLimitingMiddleware(max_requests_per_minute=100)
+error_handling_middleware = ErrorHandlingMiddleware(max_retries=2)
+caching_middleware = CachingMiddleware(ttl=300)
+
+mcp.add_middleware(logging_middleware)
+mcp.add_middleware(timing_middleware)
+mcp.add_middleware(rate_limiting_middleware)
+mcp.add_middleware(error_handling_middleware)
+mcp.add_middleware(caching_middleware)
 logger.info("✅ Middleware stack configured")
 
 
@@ -425,17 +432,14 @@ async def get_server_capabilities(ctx: Context) -> dict[str, Any]:
 
     await ctx.report_progress(75, 100, "Gathering statistics")
 
-    # Get middleware statistics
-    timing_middleware = None
-    cache_middleware = None
-    for middleware in mcp._middleware:
-        if isinstance(middleware, TimingMiddleware):
-            timing_middleware = middleware
-        elif isinstance(middleware, CachingMiddleware):
-            cache_middleware = middleware
-
+    # Access global middleware references
     await ctx.report_progress(100, 100, "Complete")
     await ctx.info("✅ Server capabilities gathered")
+
+    # Count tools, resources, prompts
+    tools = await mcp._list_tools()
+    resources = await mcp._list_resources()
+    prompts = await mcp._list_prompts()
 
     return {
         "server": "R2R Ultra MCP Server",
@@ -452,18 +456,18 @@ async def get_server_capabilities(ctx: Context) -> dict[str, Any]:
         },
         "statistics": {
             "timing": {
-                "operations_tracked": len(timing_middleware.operation_times) if timing_middleware else 0,
-                "total_operations": sum(len(times) for times in timing_middleware.operation_times.values()) if timing_middleware else 0
+                "operations_tracked": len(timing_middleware.operation_times),
+                "total_operations": sum(len(times) for times in timing_middleware.operation_times.values())
             },
             "cache": {
-                "hits": cache_middleware.hits if cache_middleware else 0,
-                "misses": cache_middleware.misses if cache_middleware else 0,
-                "hit_rate": f"{cache_middleware.hits / (cache_middleware.hits + cache_middleware.misses) * 100:.1f}%" if cache_middleware and (cache_middleware.hits + cache_middleware.misses) > 0 else "N/A"
+                "hits": caching_middleware.hits,
+                "misses": caching_middleware.misses,
+                "hit_rate": f"{caching_middleware.hits / (caching_middleware.hits + caching_middleware.misses) * 100:.1f}%" if (caching_middleware.hits + caching_middleware.misses) > 0 else "N/A"
             }
         },
-        "tools_count": len(mcp.list_tools()),
-        "resources_count": len(mcp.list_resources()),
-        "prompts_count": len(mcp.list_prompts())
+        "tools_count": len(tools),
+        "resources_count": len(resources),
+        "prompts_count": len(prompts)
     }
 
 
@@ -886,38 +890,32 @@ async def smart_collection_search(
 @mcp.tool()
 async def get_performance_stats() -> dict[str, Any]:
     """Get detailed performance statistics from middleware."""
-    timing_stats = {}
-    cache_stats = {}
-    rate_limit_stats = {}
-    error_stats = {}
-
-    for middleware in mcp._middleware:
-        if isinstance(middleware, TimingMiddleware):
-            timing_stats = {
-                "operations": list(middleware.operation_times.keys()),
-                "total_calls": sum(len(times) for times in middleware.operation_times.values()),
-                "average_times": {
-                    op: sum(times) / len(times)
-                    for op, times in middleware.operation_times.items()
-                }
-            }
-        elif isinstance(middleware, CachingMiddleware):
-            cache_stats = {
-                "hits": middleware.hits,
-                "misses": middleware.misses,
-                "hit_rate": f"{middleware.hits / (middleware.hits + middleware.misses) * 100:.1f}%" if (middleware.hits + middleware.misses) > 0 else "N/A",
-                "cache_size": len(middleware.cache)
-            }
-        elif isinstance(middleware, RateLimitingMiddleware):
-            rate_limit_stats = {
-                "max_requests_per_minute": middleware.max_requests_per_minute,
-                "active_clients": len(middleware.client_requests)
-            }
-        elif isinstance(middleware, ErrorHandlingMiddleware):
-            error_stats = {
-                "total_errors": sum(middleware.error_counts.values()),
-                "errors_by_type": dict(middleware.error_counts)
-            }
+    # Access global middleware references
+    timing_stats = {
+        "operations": list(timing_middleware.operation_times.keys()),
+        "total_calls": sum(len(times) for times in timing_middleware.operation_times.values()),
+        "average_times": {
+            op: sum(times) / len(times)
+            for op, times in timing_middleware.operation_times.items()
+        }
+    }
+    
+    cache_stats = {
+        "hits": caching_middleware.hits,
+        "misses": caching_middleware.misses,
+        "hit_rate": f"{caching_middleware.hits / (caching_middleware.hits + caching_middleware.misses) * 100:.1f}%" if (caching_middleware.hits + caching_middleware.misses) > 0 else "N/A",
+        "cache_size": len(caching_middleware.cache)
+    }
+    
+    rate_limit_stats = {
+        "max_requests_per_minute": rate_limiting_middleware.max_requests_per_minute,
+        "active_clients": len(rate_limiting_middleware.client_requests)
+    }
+    
+    error_stats = {
+        "total_errors": sum(error_handling_middleware.error_counts.values()),
+        "errors_by_type": dict(error_handling_middleware.error_counts)
+    }
 
     return {
         "timestamp": datetime.now().isoformat(),
@@ -931,21 +929,16 @@ async def get_performance_stats() -> dict[str, Any]:
 @mcp.tool()
 async def clear_cache() -> dict[str, Any]:
     """Clear the server cache."""
-    for middleware in mcp._middleware:
-        if isinstance(middleware, CachingMiddleware):
-            cache_size = len(middleware.cache)
-            middleware.cache.clear()
-            middleware.hits = 0
-            middleware.misses = 0
-            return {
-                "status": "success",
-                "message": f"Cache cleared ({cache_size} entries removed)",
-                "timestamp": datetime.now().isoformat()
-            }
-
+    # Access global caching middleware reference
+    cache_size = len(caching_middleware.cache)
+    caching_middleware.cache.clear()
+    caching_middleware.hits = 0
+    caching_middleware.misses = 0
+    
     return {
-        "status": "error",
-        "message": "Cache middleware not found"
+        "status": "success",
+        "message": f"Cache cleared ({cache_size} entries removed)",
+        "timestamp": datetime.now().isoformat()
     }
 
 
