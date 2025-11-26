@@ -138,10 +138,16 @@ MULTI-TURN CONVERSATIONS:
     The agent returns a conversation_id on first query.
     The ID is automatically saved to /tmp/.r2r_conversation_id.
 
-    Reuse conversation:
+    Auto-reuse behavior:
+    - If conversation_id exists in temp file, agent REUSES it automatically
+    - No need to pass conversation_id explicitly
+    - Use -new flag to start fresh conversation
+
+    Manual conversation control:
     - CONV_ID=\$(head -1 /tmp/.r2r_conversation_id)
     - agent "next question" rag \$CONV_ID
     - agent "next question" --conversation \$CONV_ID
+    - agent "fresh topic" -new  (clears saved ID)
 
 EXAMPLES:
     # Basic agent query (research mode, legacy style)
@@ -232,7 +238,12 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     conversation_id="${CONVERSATION_ID:-${ARGS[2]:-}}"
     max_tokens="${MAX_TOKENS:-${ARGS[3]:-$DEFAULT_MAX_TOKENS}}"
 
-    # Handle --new flag: clear conversation_id and temp file
+    # If no conversation_id provided, try to reuse from temp file
+    if [ -z "$conversation_id" ] && [ -f /tmp/.r2r_conversation_id ]; then
+        conversation_id=$(head -1 /tmp/.r2r_conversation_id)
+    fi
+
+    # Handle -new flag: clear conversation_id and temp file
     if [ "$NEW_CONVERSATION" = true ]; then
         conversation_id=""
         rm -f /tmp/.r2r_conversation_id
