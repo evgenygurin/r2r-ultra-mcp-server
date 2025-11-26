@@ -7,21 +7,23 @@ denied-tools: Write, Edit, Bash
 
 # R2R Quick Reference
 
-Show R2R quick reference with bash script commands.
+Show R2R quick reference with modular CLI commands.
 
-## Available Scripts
+## Modular R2R CLI
 
-**`.claude/scripts/r2r_client.sh`** - Query operations:
-- `search <query> [limit]` - Hybrid search (semantic + fulltext)
-- `rag <query> [max_tokens]` - RAG query with generation
-- `agent <query> [mode] [conv_id] [max_tokens]` - Agent conversation
+**`.claude/scripts/r2r`** - Unified command interface (8 commands, 48 sub-commands)
 
-**`.claude/scripts/r2r_advanced.sh`** - Management operations:
-- `docs list|get|delete|export|extract` - Document management
-- `collections list|create|add-document` - Collection management
-- `graph entities|relationships|communities|build-communities|pull` - Knowledge graphs
-- `search filtered|strategy|graph` - Advanced search
-- `analytics collection|document` - Analytics
+### Core Commands (3):
+- `search <query> [--limit N]` - Hybrid search (semantic + fulltext)
+- `rag <query> [--max-tokens N]` - RAG query with generation
+- `agent <query> [--mode research|rag]` - Multi-turn agent
+
+### Management Commands (5):
+- `docs` - Document management (14 sub-commands: list, get, upload, delete, extract, etc.)
+- `collections` - Collection management (6 sub-commands: list, create, add-doc, remove-doc, etc.)
+- `conversation` - Conversation management (5 sub-commands: list, create, get, add-message, delete)
+- `graph` - Knowledge graph operations (20 sub-commands: entities, relationships, communities, etc.)
+- `analytics` - System analytics (3 sub-commands: system, collection, document)
 
 ## Slash Commands
 
@@ -31,18 +33,48 @@ Show R2R quick reference with bash script commands.
 - `/r2r-collections [action]` - Manage collections
 - `/r2r-upload <file> [collection_ids]` - Upload document
 
-## Flags
+## Common Flags (GNU-style)
 
+**Output modes:**
+- `--quiet, -q` - Minimal output (one line per result)
 - `--json` - Raw JSON output
-- `--verbose` - Detailed metadata (search)
-- `--thinking` - Extended thinking (agent, 4096 token budget)
+- `--verbose, -v` - Full details with metadata
 
-## Examples
+**Search/RAG options:**
+- `--limit, -l <n>` - Number of results (default: 3)
+- `--max-tokens, -t <n>` - Max tokens for generation (default: 4000)
+- `--graph, -g` - Enable graph search
+- `--collection, -c <id>` - Filter by collection
+- `--filter, -f <key=val>` - Custom filters
 
-Read `.claude/scripts/R2R_EXAMPLES.md` for comprehensive examples with real code and expected results.
+**Agent options:**
+- `--mode, -m <mode>` - research (default) or rag
+- `--conversation, -c <id>` - Continue conversation
+- `--thinking` - Extended thinking (4096 token budget)
+- `--show-tools` - Show tool calls
+- `--show-sources` - Show citations
 
-Focus on:
-1. Bash script commands and flags
-2. Slash command usage
-3. Practical examples
-4. Common workflows
+## Quick Examples
+
+```bash
+# Core commands
+r2r search "transformers" --limit 5 -q
+r2r rag "What is RAG?" --show-sources
+r2r agent "Explain DeepSeek" --thinking
+
+# Management
+r2r docs list -l 10 -q
+r2r collections create -n "Research Papers"
+r2r graph entities <collection_id> -l 50
+
+# Advanced
+r2r search "AI" --graph --collection abc123
+r2r rag "Question" --filter category=research --max-tokens 8000
+r2r agent "Continue discussion" -c <conv_id> --show-tools
+```
+
+## Documentation
+
+- **Full reference:** `.claude/scripts/README.md`
+- **CLI help:** `r2r <command> help`
+- **All commands:** `r2r search help`, `r2r rag help`, `r2r agent help`, etc.

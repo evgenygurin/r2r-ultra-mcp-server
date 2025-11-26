@@ -19,15 +19,16 @@ Options:
 
 ## Instructions
 
-Use the bash script `.claude/scripts/r2r_client.sh` to interact with R2R agent.
+Use the modular R2R CLI `.claude/scripts/r2r` to interact with R2R agent.
 
 Execute the agent command:
 ```bash
-.claude/scripts/r2r_client.sh agent "$1" ${2:-research} ${3:-""} ${4:-8000}
+.claude/scripts/r2r agent "$1" --mode ${2:-research} ${3:+--conversation "$3"}
 ```
 
-**First message:** The agent creates a new conversation and returns conversation_id to stderr.
-**Follow-ups:** Use the conversation_id from previous response to continue.
+**First message:** The agent creates a new conversation and auto-saves conversation_id to `/tmp/.r2r_conversation_id`.
+**Follow-ups:** Use `--conversation <id>` or `-c <id>` to continue the conversation.
+**Auto-reuse:** If conversation_id not provided, the CLI automatically reuses the last conversation from temp file.
 
 ### Modes:
 
@@ -46,9 +47,17 @@ Add `--thinking` flag for complex queries:
 - Enables 4096 token reasoning budget
 - Best for: philosophical questions, deep analysis, multi-step reasoning
 
+Additional flags:
+- `--conversation, -c <id>` - Continue conversation
+- `--thinking` - Extended thinking (4096 tokens)
+- `--show-tools` - Show tool calls
+- `--show-sources` - Show citations
+- `--quiet, -q` - Minimal output
+- `--json` - Raw JSON
+
 Present the agent response with:
 - **Response:** Agent's answer (clean text)
-- **Conversation ID:** For follow-ups (from stderr)
+- **Conversation ID:** Auto-saved to `/tmp/.r2r_conversation_id`
 - **Mode:** Current mode
 - **Thinking:** If extended thinking used
 

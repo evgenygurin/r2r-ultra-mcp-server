@@ -15,11 +15,11 @@ Options:
 
 ## Instructions
 
-Use the bash script `.claude/scripts/r2r_client.sh` to perform RAG query with hybrid search.
+Use the modular R2R CLI `.claude/scripts/r2r` to perform RAG query with hybrid search.
 
 Execute the RAG command:
 ```bash
-.claude/scripts/r2r_client.sh rag "$1" ${2:-8000}
+.claude/scripts/r2r rag "$1" --max-tokens ${2:-8000}
 ```
 
 RAG combines:
@@ -34,6 +34,12 @@ Present result with:
 
 Additional flags:
 - `--json` - Output raw JSON with metadata
+- `--quiet, -q` - Minimal output
+- `--graph, -g` - Enable graph search
+- `--collection, -c <id>` - Search in specific collection
+- `--filter, -f <key=val>` - Filter results
+- `--show-sources` - Show retrieved chunks
+- `--show-metadata` - Show metadata
 
 If no query provided, prompt user for a query.
 

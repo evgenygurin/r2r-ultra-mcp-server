@@ -15,13 +15,13 @@ Options:
 
 ## Instructions
 
-Use the bash script `.claude/scripts/r2r_advanced.sh` to upload a document.
+Use the modular R2R CLI `.claude/scripts/r2r` to upload a document.
 
 **IMPORTANT:** This command is potentially destructive. Confirm with user before uploading.
 
 Execute upload command:
 ```bash
-.claude/scripts/r2r_advanced.sh docs upload "$1" ${2:-""} ${3:-"{}"}
+.claude/scripts/r2r docs upload "$1" ${2:+--collections "$2"}
 ```
 
 Supported file types:
@@ -33,11 +33,18 @@ Supported file types:
 - JSON (.json)
 - CSV (.csv)
 
+Additional flags:
+- `--collections, -c <ids>` - Comma-separated collection IDs
+- `--title, -t <title>` - Document title
+- `--mode, -m <mode>` - Ingestion mode (hi-res/fast, default: hi-res)
+- `--quiet, -q` - Minimal output
+- `--json` - Raw JSON output
+
 After successful upload:
 1. Extract `document_id` from response
 2. Confirm successful upload with status
 3. Suggest next steps:
-   - Extract knowledge graph: `.claude/scripts/r2r_advanced.sh docs extract <document_id>`
+   - Extract knowledge graph: `.claude/scripts/r2r docs extract <document_id>`
    - Search the document content
    - Add to more collections
    - Build knowledge graph communities

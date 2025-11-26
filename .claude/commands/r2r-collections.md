@@ -11,28 +11,38 @@ Action: **$1** (list, create, add-doc, add-user, optional)
 
 ## Instructions
 
-Use the bash script `.claude/scripts/r2r_advanced.sh` to manage collections.
+Use the modular R2R CLI `.claude/scripts/r2r` to manage collections.
 
 ### Available Commands:
 
 **List collections:**
 ```bash
-.claude/scripts/r2r_advanced.sh collections list
+.claude/scripts/r2r collections list --limit 10
 ```
 
 **Create collection:**
 ```bash
-.claude/scripts/r2r_advanced.sh collections create "Collection Name" "Description"
+.claude/scripts/r2r collections create --name "Collection Name" --description "Description"
 ```
 
 **Add document to collection:**
 ```bash
-.claude/scripts/r2r_advanced.sh collections add-document <collection_id> <document_id>
+.claude/scripts/r2r collections add-doc --collection <collection_id> --document <document_id>
 ```
 
-**Add user to collection:**
+**Remove document from collection:**
 ```bash
-.claude/scripts/r2r_advanced.sh collections add-user <user_id> <collection_id>
+.claude/scripts/r2r collections remove-doc --collection <collection_id> --document <document_id>
+```
+
+**Get collection details:**
+```bash
+.claude/scripts/r2r collections get <collection_id>
+```
+
+**Delete collection:**
+```bash
+.claude/scripts/r2r collections delete <collection_id>
 ```
 
 Present collections in a clear format:
@@ -40,6 +50,12 @@ Present collections in a clear format:
 - **Name:** Human-readable name
 - **Description:** Purpose or content type
 - **Document count:** Number of documents (if available)
+
+Additional flags:
+- `--limit, -l <n>` - Number of results (default: 10)
+- `--offset, -o <n>` - Skip first N results
+- `--quiet, -q` - Minimal output
+- `--json` - Raw JSON output
 
 ## Next Steps
 

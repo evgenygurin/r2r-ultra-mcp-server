@@ -15,16 +15,20 @@ Options:
 
 ## Instructions
 
-Use the bash script `.claude/scripts/r2r_client.sh` to perform hybrid search (semantic + fulltext).
+Use the modular R2R CLI `.claude/scripts/r2r` to perform hybrid search (semantic + fulltext).
 
 Execute the search command:
 ```bash
-.claude/scripts/r2r_client.sh search "$1" ${2:-3}
+.claude/scripts/r2r search "$1" --limit ${2:-3}
 ```
 
 Additional flags:
-- `--verbose` - Show detailed metadata (Document ID, Chunk ID, Title, Collections, Score)
+- `--quiet, -q` - Minimal output (one line per result)
 - `--json` - Output raw JSON for further processing
+- `--graph, -g` - Enable graph search
+- `--collection, -c <id>` - Search in specific collection
+- `--filter, -f <key=val>` - Filter results
+- `--strategy, -s <name>` - Search strategy (vanilla, rag_fusion, hyde)
 
 Present results in clear format:
 1. **Score:** X.XX
