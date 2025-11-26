@@ -9,6 +9,7 @@ AGENT_MODE=""
 CONVERSATION_ID=""
 MAX_TOKENS=""
 EXTENDED_THINKING=false
+NEW_CONVERSATION=false
 
 r2r_agent() {
     local query="$1"
@@ -120,6 +121,7 @@ OPTIONS (named flags):
     --conversation <id>         Continue existing conversation
     --max-tokens <n>            Max tokens for generation (default: $DEFAULT_MAX_TOKENS)
     --thinking                  Enable extended thinking (research mode)
+    --new                       Start new conversation (clears saved conversation_id)
     --json                      Output raw JSON
 
 MODES:
@@ -164,6 +166,9 @@ EXAMPLES:
     CONV_ID=\$(head -1 /tmp/.r2r_conversation_id)
     agent "Follow-up question" rag \$CONV_ID
 
+    # Start new conversation (clears saved ID)
+    agent "Fresh topic" --mode rag --new
+
     # Custom token limit
     agent "Comprehensive guide" rag "" 8000
     agent "Comprehensive guide" --max-tokens 8000
@@ -196,6 +201,10 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
                 EXTENDED_THINKING=true
                 shift
                 ;;
+            --new)
+                NEW_CONVERSATION=true
+                shift
+                ;;
             --json)
                 JSON_OUTPUT=true
                 shift
@@ -222,6 +231,12 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     mode="${AGENT_MODE:-${ARGS[1]:-$DEFAULT_MODE}}"
     conversation_id="${CONVERSATION_ID:-${ARGS[2]:-}}"
     max_tokens="${MAX_TOKENS:-${ARGS[3]:-$DEFAULT_MAX_TOKENS}}"
+
+    # Handle --new flag: clear conversation_id and temp file
+    if [ "$NEW_CONVERSATION" = true ]; then
+        conversation_id=""
+        rm -f /tmp/.r2r_conversation_id
+    fi
 
     # Convert boolean flags
     json_output="false"
