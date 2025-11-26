@@ -105,7 +105,7 @@ show_help() {
 R2R Agent Command
 
 USAGE:
-    agent <query> [mode] [conversation_id] [max_tokens] [--json] [--thinking]
+    agent <query> [mode] [conversation_id] [max_tokens] [-new] [--json] [--thinking]
 
     Or with named flags:
     agent <query> [options]
@@ -121,7 +121,7 @@ OPTIONS (named flags):
     --conversation <id>         Continue existing conversation
     --max-tokens <n>            Max tokens for generation (default: $DEFAULT_MAX_TOKENS)
     --thinking                  Enable extended thinking (research mode)
-    --new                       Start new conversation (clears saved conversation_id)
+    -new                        Start new conversation (clears saved conversation_id)
     --json                      Output raw JSON
 
 MODES:
@@ -167,7 +167,7 @@ EXAMPLES:
     agent "Follow-up question" rag \$CONV_ID
 
     # Start new conversation (clears saved ID)
-    agent "Fresh topic" --mode rag --new
+    agent "Fresh topic" --mode rag -new
 
     # Custom token limit
     agent "Comprehensive guide" rag "" 8000
@@ -201,7 +201,7 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
                 EXTENDED_THINKING=true
                 shift
                 ;;
-            --new)
+            -new)
                 NEW_CONVERSATION=true
                 shift
                 ;;
