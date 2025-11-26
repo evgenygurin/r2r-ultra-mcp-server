@@ -149,25 +149,27 @@ class TimingMiddleware(Middleware):
         """Time tool executions."""
         start_time = time.perf_counter()
         
+        # Get tool name from message (correct FastMCP 2.x API)
+        tool_name = context.message.name if hasattr(context.message, 'name') else "unknown_tool"
+        
         try:
             result = await call_next(context)
             duration = (time.perf_counter() - start_time) * 1000
             
-            # Track statistics (tool_name = "tool")
-            tool_name = "tool"
+            # Track statistics per tool
             self.operation_times[tool_name].append(duration)
             times = self.operation_times[tool_name]
             avg_time = sum(times) / len(times)
             
             self.logger.info(
-                f"⏱️ Tool executed in {duration:.2f}ms "
+                f"⏱️ {tool_name} executed in {duration:.2f}ms "
                 f"(avg: {avg_time:.2f}ms, calls: {len(times)})"
             )
             
             return result
         except Exception as e:
             duration = (time.perf_counter() - start_time) * 1000
-            self.logger.error(f"⚠️ Tool failed after {duration:.2f}ms: {e}")
+            self.logger.error(f"⚠️ {tool_name} failed after {duration:.2f}ms: {e}")
             raise
 
 
@@ -218,8 +220,9 @@ class ErrorHandlingMiddleware(Middleware):
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """Handle tool execution errors with retry logic."""
-        # Get operation identifier from context
-        operation_id = f"{context.method}" if hasattr(context, 'method') else "operation"
+        # Get tool name from message (correct FastMCP 2.x API)
+        tool_name = context.message.name if hasattr(context.message, 'name') else "unknown_tool"
+        operation_id = f"tool:{tool_name}"
 
         for attempt in range(self.max_retries + 1):
             try:
@@ -231,13 +234,13 @@ class ErrorHandlingMiddleware(Middleware):
                 if attempt < self.max_retries and e.response.status_code >= 500:
                     wait_time = 2 ** attempt
                     self.logger.warning(
-                        f"⚠️ Retrying after HTTP {e.response.status_code} "
+                        f"⚠️ Retrying {tool_name} after HTTP {e.response.status_code} "
                         f"(attempt {attempt + 1}/{self.max_retries + 1}, waiting {wait_time}s)"
                     )
                     await asyncio.sleep(wait_time)
                     continue
 
-                self.logger.error(f"❌ Operation failed with HTTP {e.response.status_code}")
+                self.logger.error(f"❌ {tool_name} failed with HTTP {e.response.status_code}")
                 raise McpError(
                     ErrorData(
                         code=-32603,
@@ -251,13 +254,13 @@ class ErrorHandlingMiddleware(Middleware):
                 if attempt < self.max_retries:
                     wait_time = 2 ** attempt
                     self.logger.warning(
-                        f"⚠️ Retrying after {type(e).__name__} "
+                        f"⚠️ Retrying {tool_name} after {type(e).__name__} "
                         f"(attempt {attempt + 1}/{self.max_retries + 1})"
                     )
                     await asyncio.sleep(wait_time)
                     continue
 
-                self.logger.error(f"❌ Operation failed: {e}")
+                self.logger.error(f"❌ {tool_name} failed: {e}")
                 raise
 
 
